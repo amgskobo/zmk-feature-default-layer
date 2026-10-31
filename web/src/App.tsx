@@ -1,4 +1,4 @@
-import { useCallback, useContext, useEffect, useState } from "react";
+import { useCallback, useContext, useEffect, useRef, useState } from "react";
 import "./App.css";
 import { connect as serial_connect } from "@zmkfirmware/zmk-studio-ts-client/transport/serial";
 import {
@@ -88,47 +88,70 @@ function endpointLabel(endpoint: { isUsb: boolean; bleProfileIndex: number }) {
   return endpoint.isUsb ? "USB" : `BLE profile ${endpoint.bleProfileIndex}`;
 }
 
+const connectionIds = new WeakMap<object, number>();
+let nextConnectionId = 1;
 export function DefaultLayerPanel() {
+  const app = useContext(ZMKAppContext);
+  const connection = app?.state.connection;
+  let identity = 0;
+  if (connection) {
+    identity = connectionIds.get(connection) ?? nextConnectionId++;
+    connectionIds.set(connection, identity);
+  }
+  const index = app?.findSubsystem(SUBSYSTEM_IDENTIFIER)?.index;
+  return <DefaultLayerSession key={`${identity}:${index ?? "missing"}`} />;
+}
+
+function DefaultLayerSession() {
   const zmkApp = useContext(ZMKAppContext);
   const [state, setState] = useState<StateResponse | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const subsystem = zmkApp?.findSubsystem(SUBSYSTEM_IDENTIFIER);
+  const connection = zmkApp?.state.connection;
+  const subsystemIndex = subsystem?.index;
+  const lifetime = useRef({ active: true, request: 0 });
+  useEffect(() => {
+    const current = lifetime.current;
+    current.active = true;
+    return () => {
+      current.active = false;
+      current.request++;
+    };
+  }, []);
 
   const callRPC = useCallback(
     async (request: Request): Promise<StateResponse | null> => {
-      if (!zmkApp?.state.connection || !subsystem) return null;
-
+      const current = lifetime.current;
+      if (!current.active || !connection || subsystemIndex === undefined)
+        return null;
+      const ticket = ++current.request;
+      const owns = () => current.active && current.request === ticket;
       setIsLoading(true);
       setError(null);
       try {
-        const service = new ZMKCustomSubsystem(
-          zmkApp.state.connection,
-          subsystem.index
+        const service = new ZMKCustomSubsystem(connection, subsystemIndex);
+        const responsePayload = await service.callRPC(
+          Request.encode(request).finish()
         );
-        const payload = Request.encode(request).finish();
-        const responsePayload = await service.callRPC(payload);
-        if (!responsePayload) return null;
-
+        if (!owns()) return null;
+        if (!responsePayload) throw new Error("Empty default-layer response");
         const resp = Response.decode(responsePayload);
-        if (resp.error) {
-          setError(resp.error.message);
-          return null;
-        }
-        if (resp.state) {
-          setState(resp.state);
-          return resp.state;
-        }
-        return null;
+        if (resp.error)
+          throw new Error(resp.error.message || "Default-layer request failed");
+        if (!resp.state) throw new Error("Missing default-layer state");
+        setState(resp.state);
+        return resp.state;
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Unknown error");
+        if (owns())
+          setError(err instanceof Error ? err.message : "Unknown error");
         return null;
       } finally {
-        setIsLoading(false);
+        if (owns()) setIsLoading(false);
       }
     },
-    [zmkApp, subsystem]
+    [connection, subsystemIndex]
   );
 
   const refresh = useCallback(() => {
@@ -136,13 +159,9 @@ export function DefaultLayerPanel() {
   }, [callRPC]);
 
   useEffect(() => {
-    // refresh()'s setState calls happen after the RPC round-trip (async),
-    // not synchronously in the effect body - the lint rule can't see through
-    // the useCallback/async indirection.
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    refresh();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [subsystem?.index]);
+    const timer = window.setTimeout(refresh, 0);
+    return () => window.clearTimeout(timer);
+  }, [refresh]);
 
   if (!zmkApp) return null;
 

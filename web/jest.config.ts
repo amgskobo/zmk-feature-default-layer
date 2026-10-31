@@ -2,6 +2,8 @@ import type { Config } from "jest";
 
 const config: Config = {
   preset: "ts-jest",
+  roots: ["<rootDir>/test", "<rootDir>/../tests/web"],
+  modulePaths: ["<rootDir>/node_modules"],
   testEnvironment: "jsdom",
   setupFilesAfterEnv: ["<rootDir>/test/setup.ts"],
   moduleNameMapper: {
@@ -35,7 +37,11 @@ const config: Config = {
       },
     ],
   },
-  testMatch: ["**/test/**/*.spec.ts", "**/test/**/*.spec.tsx"],
+  testMatch: [
+    "**/test/**/*.spec.ts",
+    "**/test/**/*.spec.tsx",
+    "**/tests/web/**/*.spec.tsx",
+  ],
 };
 
 export default config;
