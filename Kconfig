@@ -25,4 +25,11 @@ config ZMK_DEFAULT_LAYER_OS_DETECTION
     bool "Resolve 'OS detection' default layer entries via zmk-feature-os-detection"
     depends on ZMK_OS_DETECTION
 
+config ZMK_DEFAULT_LAYER_TEST
+    bool "Enable the default layer RPC lock and stored value self-tests"
+    depends on ZMK_DEFAULT_LAYER_STUDIO_RPC && ZMK_STUDIO_LOCKING
+    help
+      Owner zmk-test fixtures only. The self-tests change a default layer at
+      boot and restore it; never enable them in a keyboard build.
+
 endif

@@ -1,0 +1,10 @@
+[
+    {
+        "configs":  [
+                        "CONFIG_ZMK_DEFAULT_LAYER_TEST",
+                        "CONFIG_ZMK_DEFAULT_LAYER_STUDIO_RPC",
+                        "CONFIG_ZMK_STUDIO_LOCKING"
+                    ],
+        "hook":  "default_layer_lock_test_init"
+    }
+]

@@ -51,7 +51,8 @@ LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_LOG_LEVEL);
  * maximum; the ARRAY_DEFINE only consumes the first _default_size entries.
  * NO_CONSTRAINT (not RANGE_INT32) is used because the negative sentinels
  * (UNSET, OS_DETECTION) fall outside a plain layer-index range - values are
- * validated in is_valid_layer_value() instead.
+ * validated in is_valid_layer_value() instead, by the setters and again by
+ * resolve_value() for values that reached storage another way.
  */
 
 /* ZMK_ENDPOINT_COUNT = 1 (none) + up to 1 (USB) + up to 8 (BLE profiles). */
@@ -65,13 +66,17 @@ ZMK_CUSTOM_SETTING_ARRAY_DEFAULT_INT32_DEFINE(default_layer_endpoint_defaults,
                                               ZMK_DEFAULT_LAYER_UNSET, ZMK_DEFAULT_LAYER_UNSET,
                                               ZMK_DEFAULT_LAYER_UNSET, ZMK_DEFAULT_LAYER_UNSET);
 
+/* Writing either array needs an unlocked Studio, as this module's own RPC
+ * does, so the generic custom settings RPC cannot change a default layer while
+ * Studio is locked; the setters below write through the settings API directly
+ * and are unaffected. */
 ZMK_CUSTOM_SETTING_ARRAY_DEFINE(default_layer_endpoint, DEFAULT_LAYER_SUBSYSTEM_ID,
                                 "endpoint_layer", ZMK_CUSTOM_SETTING_VALUE_TYPE_INT32,
                                 ZMK_ENDPOINT_COUNT, ZMK_ENDPOINT_COUNT,
                                 default_layer_endpoint_defaults,
                                 ZMK_CUSTOM_SETTING_CONFIDENTIALITY_RPC_PUBLIC,
                                 ZMK_CUSTOM_SETTING_PERMISSION_UNSECURE,
-                                ZMK_CUSTOM_SETTING_PERMISSION_UNSECURE,
+                                ZMK_CUSTOM_SETTING_PERMISSION_SECURE,
                                 ZMK_CUSTOM_SETTING_NO_CONSTRAINT);
 
 ZMK_CUSTOM_SETTING_ARRAY_DEFAULT_INT32_DEFINE(default_layer_os_defaults, ZMK_DEFAULT_LAYER_UNSET,
@@ -84,7 +89,7 @@ ZMK_CUSTOM_SETTING_ARRAY_DEFINE(default_layer_os, DEFAULT_LAYER_SUBSYSTEM_ID, "o
                                 ZMK_DEFAULT_LAYER_OS_COUNT, default_layer_os_defaults,
                                 ZMK_CUSTOM_SETTING_CONFIDENTIALITY_RPC_PUBLIC,
                                 ZMK_CUSTOM_SETTING_PERMISSION_UNSECURE,
-                                ZMK_CUSTOM_SETTING_PERMISSION_UNSECURE,
+                                ZMK_CUSTOM_SETTING_PERMISSION_SECURE,
                                 ZMK_CUSTOM_SETTING_NO_CONSTRAINT);
 
 #else /* !CONFIG_ZMK_CUSTOM_SETTINGS */
@@ -237,7 +242,10 @@ static int32_t resolve_value(int32_t configured) {
         resolved = zmk_default_layer_get_os(os);
     }
 
-    if (resolved == ZMK_DEFAULT_LAYER_UNSET) {
+    /* A persisted value, or one written through the generic custom settings
+     * RPC, never passed the setters' check: anything that is not a layer index
+     * falls back to the keymap default instead of being truncated to a layer. */
+    if (resolved == ZMK_DEFAULT_LAYER_UNSET || !is_valid_layer_value(resolved, false)) {
         resolved = zmk_keymap_layer_default();
     }
 

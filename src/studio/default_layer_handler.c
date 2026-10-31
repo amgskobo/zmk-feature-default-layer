@@ -1,6 +1,7 @@
 #include <pb_decode.h>
 #include <pb_encode.h>
 #include <zephyr/sys/util.h>
+#include <zmk/studio/core.h>
 #include <zmk/studio/custom.h>
 #include <cormoran/default-layer/default_layer.pb.h>
 
@@ -135,6 +136,19 @@ static bool default_layer_rpc_handle_request(const zmk_custom_CallRequest *raw_r
         return true;
     }
 
+    /* The subsystem stays UNSECURED so the state can be read while Studio is
+     * locked. A change persists and picks the base layer every host gets, so
+     * every request other than GetState needs an unlocked Studio. */
+    if (req.which_request_type != cormoran_default_layer_Request_get_state_tag &&
+        zmk_studio_core_get_lock_state() != ZMK_STUDIO_CORE_LOCK_STATE_UNLOCKED) {
+        LOG_WRN("Default layer change refused: Studio is locked");
+        cormoran_default_layer_ErrorResponse err = cormoran_default_layer_ErrorResponse_init_zero;
+        snprintf(err.message, sizeof(err.message), "Unlock required");
+        resp->which_response_type = cormoran_default_layer_Response_error_tag;
+        resp->response_type.error = err;
+        return true;
+    }
+
     int rc = 0;
     switch (req.which_request_type) {
     case cormoran_default_layer_Request_get_state_tag:
@@ -160,3 +174,7 @@ static bool default_layer_rpc_handle_request(const zmk_custom_CallRequest *raw_r
     }
     return true;
 }
+
+#if IS_ENABLED(CONFIG_ZMK_DEFAULT_LAYER_TEST)
+#include "../../tests/support/default_layer_rpc_lock_test.inc"
+#endif
