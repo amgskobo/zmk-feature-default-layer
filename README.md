@@ -1,5 +1,17 @@
 # zmk-feature-default-layer
 
+## Reviewed fork
+
+This fork's reviewed source is on `codex/default-layer-review` in
+[`amgskobo/zmk-feature-default-layer`](https://github.com/amgskobo/zmk-feature-default-layer/tree/codex/default-layer-review).
+Select that repository URL and revision in the module's west project entry.
+Keep the module's documented imports enabled where required. The original
+upstream installation examples below describe the upstream repository.
+
+The dependency manifests select the available Custom Settings revision
+`b91a8ceb0a57a0cf41b34270752d79463e2848fa` from its reviewed fork;
+production imports and isolated tests use the same registry implementation.
+
 ZMK module to switch the default (always-on) layer depending on the
 currently connected endpoint (USB or a BLE profile) — and, optionally,
 depending on the detected host operating system.
@@ -94,6 +106,15 @@ this version adds runtime configuration via a Web UI, using the
 4. Connect over WebSerial from the [Web UI](https://cormoran.github.io/zmk-feature-default-layer/)
    to assign a layer (or "OS detection") to each connection, and a layer to
    each OS.
+
+### Studio lock
+
+`GetState` works while Studio is locked. Setting an endpoint's or an OS's
+default layer needs an unlocked Studio, because it persists and picks the base
+layer every host gets; a locked keyboard answers "Unlock required" and changes
+nothing. Both settings arrays are registered with secure write permission, so
+the generic custom settings RPC cannot change them while locked either. The
+`&df` keymap behavior is unaffected.
 
 ### Web UI
 

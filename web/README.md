@@ -82,3 +82,10 @@ npm run test:watch
 # Run tests with coverage
 npm run test:coverage
 ```
+
+## Dependency security
+
+`package.json` overrides the Studio client's transitive `protobufjs` dependency
+to `7.6.5`, including the patched UTF-8 helper. Use `npm ci` with this lockfile.
+After changing dependencies, run `npm audit --omit=dev`, the Web tests and the
+production build.

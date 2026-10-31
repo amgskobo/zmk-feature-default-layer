@@ -1,0 +1,22 @@
+{
+    "preserved_assertions":  "Original owner build/configuration/native assertions and ordered snapshots retained; fixture relocation does not retire scenarios.",
+    "unsupported_core_status":  "NOT APPLICABLE",
+    "supported_cores":  [
+                            "dya"
+                        ],
+    "gaps":  [
+                 "Physical USB/BLE/split/timing/power/reset and real browser transport require matching acceptance evidence."
+             ],
+    "execution":  {
+                      "repeats":  "Each exact native binary runs three times from independent empty initial state.",
+                      "outputs":  "Fresh directories; combined ordered logs, actual exits and raw times."
+                  },
+    "commands":  [
+                     "python3 test.py",
+                     "python3 tests/test_runner_contract.py",
+                     "python3 tests/test_native_verifier.py"
+                 ],
+    "owner":  "zmk-feature-default-layer",
+    "schema":  1,
+    "coverage_map":  "tests/README.md"
+}
