@@ -7,6 +7,10 @@ manifest:
     - name: zmk-feature-custom-settings
       url: https://github.com/amgskobo/zmk-feature-custom-settings
       revision: b91a8ceb0a57a0cf41b34270752d79463e2848fa
+      userdata:
+        review-branch: codex/custom-settings-review
     - name: zmk-feature-os-detection
-      url: https://github.com/cormoran/zmk-feature-os-detection
-      revision: main
+      url: https://github.com/amgskobo/zmk-feature-os-detection
+      revision: 0ef78dd84cf1c3eb7b4a22f66aa4753e0ae7a6bb
+      userdata:
+        review-branch: codex/os-detection-review

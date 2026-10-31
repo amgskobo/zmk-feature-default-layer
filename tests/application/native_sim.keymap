@@ -1,0 +1,21 @@
+#include "../test.dtsi"
+
+/ {
+    keymap {
+        layer_1 { bindings = <&kp A &kp A &kp A &kp A>; };
+        layer_2 { bindings = <&kp A &kp A &kp A &kp A>; };
+        layer_3 { bindings = <&kp A &kp A &kp A &kp A>; };
+        layer_4 { bindings = <&kp A &kp A &kp A &kp A>; };
+        layer_5 { bindings = <&kp A &kp A &kp A &kp A>; };
+    };
+};
+
+&kscan {
+    /* Keep the four original key events; allow the thread handoff before them. */
+    events = <
+        ZMK_MOCK_PRESS(0,0,2000)
+        ZMK_MOCK_RELEASE(0,0,10)
+        ZMK_MOCK_PRESS(0,0,10)
+        ZMK_MOCK_RELEASE(0,0,10)
+    >;
+};

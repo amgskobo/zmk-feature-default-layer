@@ -1,5 +1,6 @@
 #include <pb_decode.h>
 #include <pb_encode.h>
+#include <string.h>
 #include <zephyr/sys/util.h>
 #include <zmk/studio/core.h>
 #include <zmk/studio/custom.h>
@@ -84,6 +85,23 @@ static void handle_get_state(cormoran_default_layer_StateResponse *out) {
     out->resolved_layer = zmk_default_layer_resolve_current();
     out->layer_count = ZMK_KEYMAP_LAYERS_LEN;
     out->os_detection_available = IS_ENABLED(CONFIG_ZMK_DEFAULT_LAYER_OS_DETECTION);
+    out->has_configurable_range = true;
+    out->configurable_range.min_index = CONFIG_ZMK_DEFAULT_LAYER_MIN_INDEX;
+    out->configurable_range.max_index = CONFIG_ZMK_DEFAULT_LAYER_MAX_INDEX;
+}
+
+/* Build in the existing response buffer so the optional state does not add a
+ * large temporary ErrorResponse to the RPC thread's stack. */
+static void handle_error(cormoran_default_layer_Response *resp, const char *message,
+                         bool include_state) {
+    resp->which_response_type = cormoran_default_layer_Response_error_tag;
+    cormoran_default_layer_ErrorResponse *err = &resp->response_type.error;
+    memset(err, 0, sizeof(*err));
+    snprintf(err->message, sizeof(err->message), "%s", message);
+    if (include_state) {
+        err->has_state = true;
+        handle_get_state(&err->state);
+    }
 }
 
 static int handle_set_endpoint_layer(const cormoran_default_layer_SetEndpointLayerRequest *req,
@@ -129,10 +147,7 @@ static bool default_layer_rpc_handle_request(const zmk_custom_CallRequest *raw_r
         pb_istream_from_buffer(raw_request->payload.bytes, raw_request->payload.size);
     if (!pb_decode(&req_stream, cormoran_default_layer_Request_fields, &req)) {
         LOG_WRN("Failed to decode default_layer request: %s", PB_GET_ERROR(&req_stream));
-        cormoran_default_layer_ErrorResponse err = cormoran_default_layer_ErrorResponse_init_zero;
-        snprintf(err.message, sizeof(err.message), "Failed to decode request");
-        resp->which_response_type = cormoran_default_layer_Response_error_tag;
-        resp->response_type.error = err;
+        handle_error(resp, "Failed to decode request", false);
         return true;
     }
 
@@ -142,10 +157,7 @@ static bool default_layer_rpc_handle_request(const zmk_custom_CallRequest *raw_r
     if (req.which_request_type != cormoran_default_layer_Request_get_state_tag &&
         zmk_studio_core_get_lock_state() != ZMK_STUDIO_CORE_LOCK_STATE_UNLOCKED) {
         LOG_WRN("Default layer change refused: Studio is locked");
-        cormoran_default_layer_ErrorResponse err = cormoran_default_layer_ErrorResponse_init_zero;
-        snprintf(err.message, sizeof(err.message), "Unlock required");
-        resp->which_response_type = cormoran_default_layer_Response_error_tag;
-        resp->response_type.error = err;
+        handle_error(resp, "Unlock required", false);
         return true;
     }
 
@@ -167,10 +179,7 @@ static bool default_layer_rpc_handle_request(const zmk_custom_CallRequest *raw_r
     }
 
     if (rc != 0) {
-        cormoran_default_layer_ErrorResponse err = cormoran_default_layer_ErrorResponse_init_zero;
-        snprintf(err.message, sizeof(err.message), "Failed to process request");
-        resp->which_response_type = cormoran_default_layer_Response_error_tag;
-        resp->response_type.error = err;
+        handle_error(resp, "Failed to process request", true);
     }
     return true;
 }

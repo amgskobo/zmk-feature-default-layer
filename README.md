@@ -11,6 +11,11 @@ upstream installation examples below describe the upstream repository.
 The dependency manifests select the available Custom Settings revision
 `b91a8ceb0a57a0cf41b34270752d79463e2848fa` from its reviewed fork;
 production imports and isolated tests use the same registry implementation.
+OS Detection is pinned to
+`0ef78dd84cf1c3eb7b4a22f66aa4753e0ae7a6bb` from its reviewed fork as well.
+CI preparation checks both named `codex/*-review` branch tips against these pins
+before fetching dependencies. Update and review a pin explicitly when its
+review branch advances.
 
 ZMK module to switch the default (always-on) layer depending on the
 currently connected endpoint (USB or a BLE profile) — and, optionally,
@@ -87,6 +92,16 @@ this version adds runtime configuration via a Web UI, using the
    `CONFIG_ZMK_OS_DETECTION_LAYER_*` auto-switch options together with this
    module — both would compete to activate/deactivate layers.
 
+   Only indices in the inclusive `[MIN_INDEX, MAX_INDEX]` range can be assigned.
+   Both bounds must be within the keymap. Direct setters reject values outside
+   this range; older stored or imported values outside it resolve to the keymap
+   default. The Web UI receives these bounds from the firmware. Unset also
+   resolves to the keymap default, which may lie outside the configurable range.
+   The Web UI keeps unavailable stored values visible as disabled options until
+   a permitted replacement is saved successfully.
+   Changes arriving during an application are coalesced and reconciled to the
+   latest endpoint and mapping before the active application returns.
+
 3. Optionally add `&df` to your keymap if you want to change the mapping
    from the keyboard itself, in addition to the Web UI:
 
@@ -115,6 +130,17 @@ layer every host gets; a locked keyboard answers "Unlock required" and changes
 nothing. Both settings arrays are registered with secure write permission, so
 the generic custom settings RPC cannot change them while locked either. The
 `&df` keymap behavior is unaffected.
+
+### Save errors
+
+The settings registry can retain a new runtime value when saving to storage
+fails. Endpoint and OS setters still apply the effective runtime mapping and
+return the save error. They do not roll back over a newer update. RPC errors
+include the current runtime state; the Web UI displays it together with the
+error. These values may be unsaved, so check the current state before retrying.
+The explicit **Retry last change** action resends the failed assignment even if
+its runtime value is already selected. Older errors without a state leave the
+displayed mapping unchanged.
 
 ### Web UI
 

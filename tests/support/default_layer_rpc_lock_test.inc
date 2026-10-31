@@ -1,4 +1,5 @@
 #include "checked_init.h"
+#include "settings_save_fault.h"
 /*
  * Included at the end of src/studio/default_layer_handler.c when
  * CONFIG_ZMK_DEFAULT_LAYER_TEST is set, so it drives the real, static RPC entry
@@ -80,6 +81,13 @@ static int default_layer_lock_test_run(void) {
         LOG_ERR("default layer lock test: locked GetState was refused");
         return -EINVAL;
     }
+    const cormoran_default_layer_StateResponse *state =
+        &default_layer_lock_test_response()->response_type.state;
+    if (!state->has_configurable_range ||
+        state->configurable_range.min_index != CONFIG_ZMK_DEFAULT_LAYER_MIN_INDEX ||
+        state->configurable_range.max_index != CONFIG_ZMK_DEFAULT_LAYER_MAX_INDEX) {
+        return -EINVAL;
+    }
 
     /* Unlocked: the same change applies, then the original is written back. */
     zmk_studio_core_unlock();
@@ -133,6 +141,48 @@ static int default_layer_invalid_value_test_run(void) {
     return ret;
 }
 
+static int default_layer_error_state_test_run(void) {
+    const int32_t before = zmk_default_layer_get_os(0);
+    zmk_studio_core_unlock();
+    default_layer_test_fail_saves(true);
+    int rc = default_layer_lock_test_set_os(0, 0);
+    default_layer_test_fail_saves(false);
+    zmk_studio_core_lock();
+    const cormoran_default_layer_Response *response = default_layer_lock_test_response();
+    bool passed = rc == 0 && default_layer_test_save_failures() > 0 &&
+                  response->which_response_type == cormoran_default_layer_Response_error_tag &&
+                  response->response_type.error.has_state;
+
+    /* Exercise real nanopb encoding/decoding, including nested presence flags. */
+    uint8_t bytes[512];
+    pb_ostream_t output = pb_ostream_from_buffer(bytes, sizeof(bytes));
+    cormoran_default_layer_Response decoded = cormoran_default_layer_Response_init_zero;
+    if (passed && pb_encode(&output, cormoran_default_layer_Response_fields, response)) {
+        pb_istream_t input = pb_istream_from_buffer(bytes, output.bytes_written);
+        passed = pb_decode(&input, cormoran_default_layer_Response_fields, &decoded) &&
+                 decoded.which_response_type == cormoran_default_layer_Response_error_tag &&
+                 decoded.response_type.error.has_state &&
+                 decoded.response_type.error.state.os_layers_count > 0 &&
+                 decoded.response_type.error.state.os_layers[0].value == 0 &&
+                 decoded.response_type.error.state.has_configurable_range;
+    } else {
+        passed = false;
+    }
+    /* Reusing the buffer for a locked refusal must clear the prior state. */
+    if (default_layer_lock_test_set_os(0, before) != 0 || !default_layer_lock_test_refused() ||
+        default_layer_lock_test_response()->response_type.error.has_state) {
+        passed = false;
+    }
+    struct zmk_custom_setting_value restore = ZMK_CUSTOM_SETTING_VALUE_INT32(before);
+    int restored = zmk_custom_setting_write_array_by_key(
+        "cormoran__default_layer", "os_layer", 0, &restore, ZMK_CUSTOM_SETTING_WRITE_MODE_MEMORY);
+    if (!passed || restored != 0) {
+        return -EINVAL;
+    }
+    LOG_INF("PASS: default_layer_rpc_failed_save_state");
+    return 0;
+}
+
 static int default_layer_lock_test_init(void) {
     int ret = default_layer_lock_test_run();
     if (ret < 0) {
@@ -141,6 +191,10 @@ static int default_layer_lock_test_init(void) {
     ret = default_layer_invalid_value_test_run();
     if (ret < 0) {
         LOG_ERR("FAIL: default_layer_resolve_rejects_invalid (%d)", ret);
+    }
+    ret = default_layer_error_state_test_run();
+    if (ret < 0) {
+        LOG_ERR("FAIL: default_layer_rpc_failed_save_state (%d)", ret);
     }
     return 0;
 }

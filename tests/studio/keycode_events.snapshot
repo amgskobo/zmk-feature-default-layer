@@ -2,3 +2,4 @@ cormoran__default_layer, Security: Unsecured
 cormoran_custom_settings, Security: Unsecured
 PASS: default_layer_rpc_requires_unlock
 PASS: default_layer_resolve_rejects_invalid
+PASS: default_layer_rpc_failed_save_state

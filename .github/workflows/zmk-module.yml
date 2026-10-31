@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+      - codex/default-layer-review
     paths-ignore:
       - "**/*.md"
       - .github/workflows/copilot-setup-steps.yml
@@ -43,7 +44,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     container:
-      image: zmkfirmware/zmk-build-arm:stable
+      image: zmkfirmware/zmk-build-arm@sha256:edb1c953438c6f720ddb79c3762f3972013b7fbbaf4fff3592fc869983e7afc5
     name: Build
     steps:
       - name: Checkout

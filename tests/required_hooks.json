@@ -6,5 +6,27 @@
                         "CONFIG_ZMK_STUDIO_LOCKING"
                     ],
         "hook":  "default_layer_lock_test_init"
+    },
+    {
+        "configs": [
+            "CONFIG_ZMK_DEFAULT_LAYER_APPLICATION_TEST",
+            "CONFIG_ZMK_DEFAULT_LAYER",
+            "CONFIG_ZMK_CUSTOM_SETTINGS",
+            "CONFIG_ZMK_STUDIO",
+            "CONFIG_ZMK_KEYMAP_LAYER_REORDERING"
+        ],
+        "fixtures": ["application"],
+        "hook": "default_layer_application_test_init"
+    },
+    {
+        "configs": [
+            "CONFIG_ZMK_DEFAULT_LAYER_APPLICATION_TEST",
+            "CONFIG_ZMK_DEFAULT_LAYER",
+            "CONFIG_ZMK_CUSTOM_SETTINGS",
+            "CONFIG_ZMK_STUDIO",
+            "CONFIG_ZMK_KEYMAP_LAYER_REORDERING"
+        ],
+        "fixtures": ["application"],
+        "hook": "default_layer_concurrency_test"
     }
 ]

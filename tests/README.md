@@ -40,6 +40,31 @@ source identities in the evidence. Controlled DOM/native/compile checks do not
 establish browser transport, physical USB/BLE/split, timing, power or reset
 acceptance.
 
+The `application` native fixture uses six layers and the configurable range
+1..3. It checks both setter and generic-storage validation, retains unrelated
+function layers, injects a real re-entrant mapping update during deactivation,
+and verifies cleanup/fallback after layer reordering. A separate kernel thread
+also updates the mapping while the first thread is applying a layer change.
+Both checked completions and six ordered markers are required in each of the
+three native runs. The original scenarios and assertions remain required.
+
+The Web panel checks partial, single-layer and legacy unadvertised ranges in
+both mapping tables. The RPC lock fixture also checks that GetState advertises
+the configured range, including the zero-valued 0..0 sub-message.
+Unavailable saved values remain displayed as disabled options. Web cases cover
+both tables, successful replacement and refusal without losing the stored value.
+
+Test-only link wrapping injects `-EIO` into real settings saves for the module's
+namespace. The application fixture checks endpoint and OS runtime reconciliation
+without masking the error; Studio checks a real nanopb error-state round trip.
+Web cases check returned runtime state and reject retired error snapshots after
+connection/subsystem replacement. The fault wrapper is excluded from production.
+
+`tests/test_review_dependencies.py` validates the actual imported fork manifest
+and refusal of missing/mismatched remote refs. These offline controls do not
+fetch; `tools/verify_review_dependencies.py` checks the real named branch tips
+only during explicit environment preparation, as used by the CI west-init action.
+
 The owner command boundary limits `zmk-build` to one target at a time by
 default. `OWNER_TEST_BUILD_PARALLELISM` selects an explicit positive target
 count; account for compiler jobs and concurrent owners in the global budget.

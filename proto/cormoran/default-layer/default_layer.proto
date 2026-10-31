@@ -3,8 +3,8 @@ syntax = "proto3";
 package cormoran.default_layer;
 
 // `value` fields use a shared sentinel encoding (also used by custom
-// settings): >=0 is a keymap layer index, -1 means unset (module leaves this
-// endpoint/OS alone), -2 (endpoint values only) means "resolve via the
+// settings): >=0 is a keymap layer index within the configurable range,
+// -1 means use the keymap default, -2 (endpoint values only) means "resolve via the
 // per-OS mapping using the OS detected for this endpoint".
 message GetStateRequest {}
 
@@ -33,6 +33,13 @@ message OsLayerState {
     int32 value = 2;
 }
 
+// The optional sub-message distinguishes a single-layer range 0..0 from an
+// older firmware that does not advertise its range.
+message LayerRange {
+    uint32 min_index = 1;
+    uint32 max_index = 2;
+}
+
 message StateResponse {
     repeated EndpointState endpoints = 1;
     repeated OsLayerState os_layers = 2;
@@ -41,9 +48,15 @@ message StateResponse {
     int32 resolved_layer = 5;
     uint32 layer_count = 6;
     bool os_detection_available = 7;
+    LayerRange configurable_range = 8;
 }
 
-message ErrorResponse { string message = 1; }
+message ErrorResponse {
+    string message = 1;
+    // A failed save can retain new runtime values. Clients should display this
+    // state while still reporting the error; absence preserves older servers.
+    StateResponse state = 2;
+}
 
 message Request {
     oneof request_type {

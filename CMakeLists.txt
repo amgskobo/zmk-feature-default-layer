@@ -7,6 +7,11 @@ target_sources_ifdef(CONFIG_ZMK_DEFAULT_LAYER app PRIVATE
     src/behaviors/behavior_default_layer.c
 )
 
+if(CONFIG_ZMK_DEFAULT_LAYER_TEST OR CONFIG_ZMK_DEFAULT_LAYER_APPLICATION_TEST)
+    target_sources(app PRIVATE tests/support/settings_save_fault.c)
+    zephyr_link_libraries(-Wl,--wrap=settings_save_one)
+endif()
+
 if(CONFIG_ZMK_DEFAULT_LAYER_STUDIO_RPC)
     target_sources(app PRIVATE src/studio/default_layer_handler.c)
 

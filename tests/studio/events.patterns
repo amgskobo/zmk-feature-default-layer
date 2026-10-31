@@ -3,3 +3,5 @@ s/.*PASS: default_layer_rpc_requires_unlock/PASS: default_layer_rpc_requires_unl
 s/.*FAIL: default_layer_rpc_requires_unlock/FAIL: default_layer_rpc_requires_unlock/p
 s/.*PASS: default_layer_resolve_rejects_invalid/PASS: default_layer_resolve_rejects_invalid/p
 s/.*FAIL: default_layer_resolve_rejects_invalid/FAIL: default_layer_resolve_rejects_invalid/p
+s/.*PASS: default_layer_rpc_failed_save_state/PASS: default_layer_rpc_failed_save_state/p
+s/.*FAIL: default_layer_rpc_failed_save_state/FAIL: default_layer_rpc_failed_save_state/p

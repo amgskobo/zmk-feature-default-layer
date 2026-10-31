@@ -21,8 +21,9 @@
 #define ZMK_DEFAULT_LAYER_OS_COUNT 6
 
 /* Resolve and (re-)apply the default layer for the currently selected
- * endpoint. Safe to call from any context; re-entrant calls for the same
- * endpoint/value are no-ops beyond the activate/deactivate calls. */
+ * endpoint, from thread context. Updates received during an application are
+ * coalesced; the active application reconciles the latest mapping before it
+ * returns. Re-entrant callers return without waiting for that reconciliation. */
 void zmk_default_layer_resolve_and_apply(const char *reason);
 
 /* Resolve the currently selected endpoint's configured value (layer index,
@@ -33,12 +34,15 @@ void zmk_default_layer_resolve_and_apply(const char *reason);
 int32_t zmk_default_layer_resolve_current(void);
 
 /* Get/set the configured value (layer index, UNSET, or OS_DETECTION) for one
- * endpoint, addressed by zmk_endpoint_instance_to_index(). */
+ * endpoint, addressed by zmk_endpoint_instance_to_index(). A persistence error
+ * is returned even when the registry retains a new runtime value; the setter
+ * still reconciles the effective mapping. Read back before retrying. */
 int32_t zmk_default_layer_get_endpoint(uint8_t endpoint_index);
 int zmk_default_layer_set_endpoint(uint8_t endpoint_index, int32_t value, const char *command);
 
 /* Get/set the configured value (layer index or UNSET) for one OS, addressed
  * by `enum zmk_os` (0=unknown, 1=windows, 2=macos, 3=linux, 4=ios,
- * 5=android). OS_DETECTION is not a valid value here. */
+ * 5=android). OS_DETECTION is not a valid value here. Persistence errors have
+ * the same runtime-value semantics as the endpoint setter. */
 int32_t zmk_default_layer_get_os(uint8_t os);
 int zmk_default_layer_set_os(uint8_t os, int32_t value, const char *command);

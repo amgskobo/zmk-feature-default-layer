@@ -66,6 +66,7 @@ repos:
       - id: clang-format
         name: clang-format
         files: \.(c|h|inc|proto)$
+        types_or: [text]
         additional_dependencies: [clang-format==21.1.8]
   # Lint for test script
   - repo: https://github.com/astral-sh/ruff-pre-commit

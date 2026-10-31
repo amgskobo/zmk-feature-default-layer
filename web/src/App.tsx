@@ -71,15 +71,34 @@ function App() {
   );
 }
 
-function layerValueOptions(layerCount: number, allowOsDetection: boolean) {
-  const options: { value: number; label: string }[] = [
+function layerValueOptions(
+  state: StateResponse,
+  allowOsDetection: boolean,
+  storedValue: number
+) {
+  const options: { value: number; label: string; disabled?: boolean }[] = [
     { value: UNSET, label: "— (unset)" },
   ];
   if (allowOsDetection) {
     options.push({ value: OS_DETECTION, label: "OS detection" });
   }
-  for (let i = 0; i < layerCount; i++) {
+  const min = state.configurableRange?.minIndex ?? 0;
+  const max = Math.min(
+    state.configurableRange?.maxIndex ?? state.layerCount - 1,
+    state.layerCount - 1
+  );
+  for (let i = min; i <= max; i++) {
     options.push({ value: i, label: `Layer ${i}` });
+  }
+  if (!options.some((option) => option.value === storedValue)) {
+    options.push({
+      value: storedValue,
+      label:
+        storedValue >= 0
+          ? `Unavailable layer ${storedValue}`
+          : `Unsupported value ${storedValue}`,
+      disabled: true,
+    });
   }
   return options;
 }
@@ -107,6 +126,7 @@ function DefaultLayerSession() {
   const [state, setState] = useState<StateResponse | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [failedRequest, setFailedRequest] = useState<Request | null>(null);
 
   const subsystem = zmkApp?.findSubsystem(SUBSYSTEM_IDENTIFIER);
   const connection = zmkApp?.state.connection;
@@ -130,6 +150,7 @@ function DefaultLayerSession() {
       const owns = () => current.active && current.request === ticket;
       setIsLoading(true);
       setError(null);
+      setFailedRequest(null);
       try {
         const service = new ZMKCustomSubsystem(connection, subsystemIndex);
         const responsePayload = await service.callRPC(
@@ -138,14 +159,19 @@ function DefaultLayerSession() {
         if (!owns()) return null;
         if (!responsePayload) throw new Error("Empty default-layer response");
         const resp = Response.decode(responsePayload);
-        if (resp.error)
+        if (resp.error) {
+          if (resp.error.state) setState(resp.error.state);
           throw new Error(resp.error.message || "Default-layer request failed");
+        }
         if (!resp.state) throw new Error("Missing default-layer state");
         setState(resp.state);
         return resp.state;
       } catch (err) {
-        if (owns())
+        if (owns()) {
           setError(err instanceof Error ? err.message : "Unknown error");
+          if (request.setEndpointLayer || request.setOsLayer)
+            setFailedRequest(request);
+        }
         return null;
       } finally {
         if (owns()) setIsLoading(false);
@@ -191,6 +217,14 @@ function DefaultLayerSession() {
       {error && (
         <div className="error-message">
           <p>🚨 {error}</p>
+          {failedRequest && (
+            <button
+              disabled={isLoading}
+              onClick={() => void callRPC(failedRequest)}
+            >
+              Retry last change
+            </button>
+          )}
         </div>
       )}
 
@@ -242,11 +276,17 @@ function DefaultLayerSession() {
                         )
                       }
                     >
-                      {layerValueOptions(state.layerCount, true).map((opt) => (
-                        <option key={opt.value} value={opt.value}>
-                          {opt.label}
-                        </option>
-                      ))}
+                      {layerValueOptions(state, true, endpoint.value).map(
+                        (opt) => (
+                          <option
+                            key={opt.value}
+                            value={opt.value}
+                            disabled={opt.disabled}
+                          >
+                            {opt.label}
+                          </option>
+                        )
+                      )}
                     </select>
                   </td>
                 </tr>
@@ -281,27 +321,32 @@ function DefaultLayerSession() {
                         setOsLayer(entry.os, parseInt(e.target.value, 10))
                       }
                     >
-                      {layerValueOptions(state.layerCount, false).map((opt) => (
-                        <option key={opt.value} value={opt.value}>
-                          {opt.label}
-                        </option>
-                      ))}
+                      {layerValueOptions(state, false, entry.value).map(
+                        (opt) => (
+                          <option
+                            key={opt.value}
+                            value={opt.value}
+                            disabled={opt.disabled}
+                          >
+                            {opt.label}
+                          </option>
+                        )
+                      )}
                     </select>
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
-
-          <button
-            className="btn btn-secondary"
-            disabled={isLoading}
-            onClick={refresh}
-          >
-            {isLoading ? "⏳ Refreshing..." : "🔄 Refresh"}
-          </button>
         </>
       )}
+      <button
+        className="btn btn-secondary"
+        disabled={isLoading || (state === null && error === null)}
+        onClick={refresh}
+      >
+        {isLoading ? "⏳ Refreshing..." : "🔄 Refresh"}
+      </button>
     </section>
   );
 }

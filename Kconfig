@@ -32,4 +32,11 @@ config ZMK_DEFAULT_LAYER_TEST
       Owner zmk-test fixtures only. The self-tests change a default layer at
       boot and restore it; never enable them in a keyboard build.
 
+config ZMK_DEFAULT_LAYER_APPLICATION_TEST
+    bool "Enable default layer range and application self-tests"
+    depends on ZMK_CUSTOM_SETTINGS && ZMK_KEYMAP_LAYER_REORDERING
+    help
+      Owner native fixtures only. Exercises mapping validation, re-entrant
+      updates and layer reordering; never enable in a keyboard build.
+
 endif
