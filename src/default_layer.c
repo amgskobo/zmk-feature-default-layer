@@ -15,6 +15,9 @@
 #include <zmk/event_manager.h>
 #include <zmk/events/endpoint_changed.h>
 #include <zmk/keymap.h>
+#if IS_ENABLED(CONFIG_ZMK_STUDIO)
+#include <zmk/studio/rpc.h>
+#endif
 
 #if IS_ENABLED(CONFIG_ZMK_CUSTOM_SETTINGS)
 #include <cormoran/zmk/custom_settings.h>
@@ -42,6 +45,33 @@ static bool apply_pending;
 /* Only the applying caller accesses this ID. It can move outside the configured
  * index range when Studio reorders layers, but still needs retiring. */
 static zmk_keymap_layer_id_t applied_layer_id = ZMK_KEYMAP_LAYER_ID_INVAL;
+
+static int32_t global_default_index(void) {
+    const zmk_keymap_layer_id_t id = zmk_keymap_layer_default();
+    for (int i = 0; i < ZMK_KEYMAP_LAYERS_LEN; ++i) {
+        if (zmk_keymap_layer_index_to_id(i) == id)
+            return i;
+    }
+    /* Never turn a missing stable default into an unrelated layer at zero. */
+    return ZMK_DEFAULT_LAYER_UNSET;
+}
+
+bool zmk_default_layer_index_available(int32_t index) {
+    int32_t floor = global_default_index();
+    if (floor >= 0 && index >= CONFIG_ZMK_DEFAULT_LAYER_MIN_INDEX &&
+        index <= CONFIG_ZMK_DEFAULT_LAYER_MAX_INDEX && index >= floor) {
+        zmk_keymap_layer_id_t id = zmk_keymap_layer_index_to_id(index);
+        return id != ZMK_KEYMAP_LAYER_ID_INVAL && id < ZMK_KEYMAP_LAYERS_LEN;
+    }
+    return false;
+}
+
+bool zmk_default_layer_application_pending(void) {
+    k_spinlock_key_t key = k_spin_lock(&apply_lock);
+    bool pending = applying || apply_pending;
+    k_spin_unlock(&apply_lock, key);
+    return pending;
+}
 
 /*
  * Storage: when zmk-feature-custom-settings is enabled it is the only source
@@ -159,9 +189,7 @@ static bool is_valid_layer_value(int32_t value, bool allow_os_detection) {
     if (allow_os_detection && value == ZMK_DEFAULT_LAYER_OS_DETECTION) {
         return true;
     }
-    return value >= CONFIG_ZMK_DEFAULT_LAYER_MIN_INDEX &&
-           value <= CONFIG_ZMK_DEFAULT_LAYER_MAX_INDEX &&
-           zmk_keymap_layer_index_to_id(value) != ZMK_KEYMAP_LAYER_ID_INVAL;
+    return zmk_default_layer_index_available(value);
 }
 
 static void resolve_and_apply(const char *reason);
@@ -230,7 +258,9 @@ static void apply_layer(struct zmk_endpoint_instance endpoint, int endpoint_inde
     char endpoint_str[ZMK_ENDPOINT_STR_LEN];
     zmk_endpoint_instance_to_str(endpoint, endpoint_str, sizeof(endpoint_str));
     zmk_keymap_layer_id_t global_default = zmk_keymap_layer_default();
-    zmk_keymap_layer_id_t target = zmk_keymap_layer_index_to_id(layer);
+    zmk_keymap_layer_id_t target = layer >= 0 && layer < ZMK_KEYMAP_LAYERS_LEN
+                                       ? zmk_keymap_layer_index_to_id(layer)
+                                       : ZMK_KEYMAP_LAYER_ID_INVAL;
 
     LOG_INF("default-layer apply reason=%s endpoint=%s index=%d configured=%d target=%d global=%d",
             reason, endpoint_str, endpoint_index, configured, layer, global_default);
@@ -243,7 +273,8 @@ static void apply_layer(struct zmk_endpoint_instance endpoint, int endpoint_inde
 
     for (int i = CONFIG_ZMK_DEFAULT_LAYER_MIN_INDEX; i <= CONFIG_ZMK_DEFAULT_LAYER_MAX_INDEX; i++) {
         zmk_keymap_layer_id_t id = zmk_keymap_layer_index_to_id(i);
-        if (id != ZMK_KEYMAP_LAYER_ID_INVAL && id != target && id != global_default) {
+        if (id != ZMK_KEYMAP_LAYER_ID_INVAL && id < ZMK_KEYMAP_LAYERS_LEN && id != target &&
+            id != global_default) {
             int rc = zmk_keymap_layer_deactivate(id, true);
             if (rc != 0) {
                 LOG_WRN("default-layer deactivate-failed endpoint=%s index=%d layer=%d rc=%d",
@@ -252,6 +283,11 @@ static void apply_layer(struct zmk_endpoint_instance endpoint, int endpoint_inde
         }
     }
 
+    if (target == ZMK_KEYMAP_LAYER_ID_INVAL || target >= ZMK_KEYMAP_LAYERS_LEN) {
+        LOG_WRN("default-layer apply-failed endpoint=%s index=%d layer=%d rc=%d", endpoint_str,
+                endpoint_index, layer, -ENODEV);
+        return;
+    }
     if (target != global_default) {
         int ret = zmk_keymap_layer_activate(target, true);
         if (ret < 0) {
@@ -282,13 +318,7 @@ static int32_t resolve_value(int32_t configured) {
      * range falls back to the keymap default. Its stable ID must be converted
      * back to an index after Studio reorders layers. */
     if (resolved == ZMK_DEFAULT_LAYER_UNSET || !is_valid_layer_value(resolved, false)) {
-        zmk_keymap_layer_id_t global_default = zmk_keymap_layer_default();
-        for (int i = 0; i < ZMK_KEYMAP_LAYERS_LEN; i++) {
-            if (zmk_keymap_layer_index_to_id(i) == global_default) {
-                return i;
-            }
-        }
-        return 0;
+        return global_default_index();
     }
 
     return resolved;
@@ -300,7 +330,7 @@ int32_t zmk_default_layer_resolve_current(void) {
     return resolve_value(zmk_default_layer_get_endpoint(endpoint_index));
 }
 
-static void resolve_and_apply(const char *reason) {
+static void apply_current(const char *reason) {
     k_spinlock_key_t key = k_spin_lock(&apply_lock);
     apply_pending = true;
     if (applying) {
@@ -310,7 +340,9 @@ static void resolve_and_apply(const char *reason) {
     applying = true;
     k_spin_unlock(&apply_lock, key);
 
-    for (;;) {
+    /* Reentrant events usually need one more pass. Bound this invocation so
+     * sustained foreign writes cannot occupy the key-event queue forever. */
+    for (unsigned pass = 0; pass < 4; ++pass) {
         key = k_spin_lock(&apply_lock);
         apply_pending = false;
         k_spin_unlock(&apply_lock, key);
@@ -329,6 +361,59 @@ static void resolve_and_apply(const char *reason) {
         }
         k_spin_unlock(&apply_lock, key);
         reason = "coalesced-update";
+    }
+    key = k_spin_lock(&apply_lock);
+    applying = false;
+    k_spin_unlock(&apply_lock, key);
+}
+
+static void request_application(void);
+static void default_layer_apply_work_handler(struct k_work *work) {
+    ARG_UNUSED(work);
+    k_spinlock_key_t key = k_spin_lock(&apply_lock);
+    bool pending = apply_pending;
+    k_spin_unlock(&apply_lock, key);
+    if (pending) {
+        apply_current("queued-update");
+        if (zmk_default_layer_application_pending())
+            request_application();
+    }
+}
+static K_WORK_DEFINE(default_layer_apply_work, default_layer_apply_work_handler);
+
+#if IS_ENABLED(CONFIG_ZMK_DEFAULT_LAYER_REVIEW_TEST)
+static void review_application_requested(void);
+#endif
+
+static void request_application(void) {
+    k_spinlock_key_t key = k_spin_lock(&apply_lock);
+    apply_pending = true;
+    k_spin_unlock(&apply_lock, key);
+#if IS_ENABLED(CONFIG_ZMK_DEFAULT_LAYER_REVIEW_TEST)
+    review_application_requested();
+#endif
+    /* Ordinary local/split key processing uses this same queue. A private
+     * mutex would not serialize against those core behaviors. */
+    k_work_submit(&default_layer_apply_work);
+}
+
+static void resolve_and_apply(const char *reason) {
+    if (k_current_get() == &k_sys_work_q.thread) {
+        apply_current(reason);
+        if (zmk_default_layer_application_pending())
+            request_application();
+        return;
+    }
+    request_application();
+    k_spinlock_key_t key = k_spin_lock(&apply_lock);
+    bool in_flight = applying;
+    k_spin_unlock(&apply_lock, key);
+    /* A layer-event callback may hand off to another thread and wait for it.
+     * That thread must be able to request a coalesced update without waiting
+     * for the callback that it is supposed to release. */
+    if (!in_flight && !k_is_in_isr()) {
+        struct k_work_sync sync;
+        k_work_flush(&default_layer_apply_work, &sync);
     }
 }
 
@@ -364,12 +449,12 @@ SYS_INIT(default_layer_init, APPLICATION, CONFIG_APPLICATION_INIT_PRIORITY);
 
 static int default_layer_listener(const zmk_event_t *eh) {
     if (as_zmk_endpoint_changed(eh)) {
-        resolve_and_apply("endpoint-change");
+        request_application();
         return ZMK_EV_EVENT_BUBBLE;
     }
 #if IS_ENABLED(CONFIG_ZMK_DEFAULT_LAYER_OS_DETECTION)
     if (as_zmk_os_changed(eh)) {
-        resolve_and_apply("os-change");
+        request_application();
         return ZMK_EV_EVENT_BUBBLE;
     }
 #endif
@@ -377,14 +462,25 @@ static int default_layer_listener(const zmk_event_t *eh) {
     if (as_zmk_custom_settings_initialized(eh)) {
         /* Fired once, after settings_load() has populated every persisted
          * value - the race-free point to apply the persisted layers at boot. */
-        resolve_and_apply("settings-initialized");
+        request_application();
         return ZMK_EV_EVENT_BUBBLE;
     }
     const struct zmk_custom_setting_changed *setting_ev = as_zmk_custom_setting_changed(eh);
     if (setting_ev && setting_ev->setting && setting_ev->setting->custom_subsystem_id &&
         strcmp(setting_ev->setting->custom_subsystem_id, DEFAULT_LAYER_SUBSYSTEM_ID) == 0) {
-        resolve_and_apply("setting-change");
+        request_application();
         return ZMK_EV_EVENT_BUBBLE;
+    }
+#endif
+#if IS_ENABLED(CONFIG_ZMK_STUDIO)
+    const struct zmk_studio_rpc_notification *notification = as_zmk_studio_rpc_notification(eh);
+    if (notification &&
+        notification->notification.which_subsystem == zmk_studio_Notification_keymap_tag &&
+        notification->notification.subsystem.keymap.which_notification_type ==
+            zmk_keymap_Notification_unsaved_changes_status_changed_tag) {
+        /* Move/remove/add/reset/discard may change the current index-to-ID
+         * map without changing any activation bits. Reconcile after the edit. */
+        request_application();
     }
 #endif
     return ZMK_EV_EVENT_BUBBLE;
@@ -392,6 +488,9 @@ static int default_layer_listener(const zmk_event_t *eh) {
 
 ZMK_LISTENER(default_layer, default_layer_listener);
 ZMK_SUBSCRIPTION(default_layer, zmk_endpoint_changed);
+#if IS_ENABLED(CONFIG_ZMK_STUDIO)
+ZMK_SUBSCRIPTION(default_layer, zmk_studio_rpc_notification);
+#endif
 #if IS_ENABLED(CONFIG_ZMK_DEFAULT_LAYER_OS_DETECTION)
 ZMK_SUBSCRIPTION(default_layer, zmk_os_changed);
 #endif
@@ -402,4 +501,7 @@ ZMK_SUBSCRIPTION(default_layer, zmk_custom_setting_changed);
 
 #if IS_ENABLED(CONFIG_ZMK_DEFAULT_LAYER_APPLICATION_TEST)
 #include "../tests/support/default_layer_application_test.inc"
+#endif
+#if IS_ENABLED(CONFIG_ZMK_DEFAULT_LAYER_REVIEW_TEST)
+#include "../tests/support/default_layer_review_test.inc"
 #endif

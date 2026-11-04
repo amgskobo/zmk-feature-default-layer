@@ -40,6 +40,10 @@ message LayerRange {
     uint32 max_index = 2;
 }
 
+// Present even when no explicit layer is currently assignable. An index must
+// name a live layer at or above the current global default and be in range.
+message AvailableLayers { repeated uint32 indices = 1; }
+
 message StateResponse {
     repeated EndpointState endpoints = 1;
     repeated OsLayerState os_layers = 2;
@@ -49,6 +53,10 @@ message StateResponse {
     uint32 layer_count = 6;
     bool os_detection_available = 7;
     LayerRange configurable_range = 8;
+    AvailableLayers available_layers = 9;
+    // resolved_layer is the desired mapping. A coalesced/in-flight update may
+    // still be waiting for its system-workqueue application.
+    bool application_pending = 10;
 }
 
 message ErrorResponse {

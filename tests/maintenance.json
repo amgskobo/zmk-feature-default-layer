@@ -18,5 +18,9 @@
                  ],
     "owner":  "zmk-feature-default-layer",
     "schema":  1,
-    "coverage_map":  "tests/README.md"
+    "coverage_map":  "tests/README.md",
+    "ordering_review": "Canonical review native fixture: moved global floor, stable-ID dispatch A/B/C/D, numeric reorder semantics, repeated removal/invalid stored value, holes/live count/restoration, OS fallback and DF_INC; real nanopb availability/empty presence and in-flight GetState; separate checked hook and four markers, same binary3times.",
+    "key_queue_review": "Actual system-workqueue position events and mo press/release versus foreign generic/direct setters; injected save error retained; nonblocking notification requests; at most4 coalesced passes then resubmit, finite20-update queued-key fairness control.",
+    "web_availability": "tests/web/layerAvailability.spec.tsx: authoritative holes/empty list, removed stored choices in both tables, permitted replacement/clearing, moved global floor and pending/completed state; original legacy range/lifecycle cases preserved.",
+    "review_negative_controls": "tests/review_negative_control.py ISOLATED_OWNER FAULT; default-floor/structural-trigger/direct-apply/unbounded-coalescing/availability-wire/pending-state => unchanged review native assertions3times; web-availability/web-pending => complete owner Web entry. Compile/setup/collection/timeout failures do not qualify."
 }

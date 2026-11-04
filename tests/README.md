@@ -94,3 +94,66 @@ connection and subsystem-index replacement, immediate mapping retirement, late
 success/error and independent loading completion. The original Web scenarios
 remain selected. Retired requests cannot replace the current state. These are
 controlled SDK/DOM observations; physical transport remains NOT RUN.
+
+## Ordering, dispatch and application queue regressions
+
+The additional `review` native fixture is selected by the same canonical
+`python3 test.py` entry. All original native scenarios, six application markers,
+four board configurations and ordered snapshots remain unchanged. The review
+fixture has its own checked completion and four independently expected markers;
+the exact native binary runs three times with independent initial state.
+
+The fixture edits the actual core ordering and emits the same unsaved-change
+notification as core Studio. A moved global default rejects lower indices at
+both setters and generic-storage resolution; real position/keycode dispatch
+distinguishes the stable layer IDs with synthetic A/B/C/D bindings. OS fallback,
+the current global index outside the configured range, an authoritative empty
+availability message, and `DF_INC` skipping unavailable positions are covered.
+Reordering follows the documented numeric position, retires the previous stable
+ID and dispatches the newly mapped layer. Repeated removal retires applied IDs,
+preserves an invalid stored number, reports the live count and handles an
+interior invalid slot separately from live later indices. Restoration reconciles
+that same saved index. Raw nanopb request/response round trips check optional
+presence and exact availability lists while Studio remains locked for GetState.
+
+The kernel boundary parks actual key work on the system queue. A distinct thread
+performs a generic memory write or a direct setter with an injected save error.
+Storage may change immediately, but layer events must remain on the system queue.
+Release runs real position events and an `&mo` press/release before queued
+application; temporary/base state and locks must remain coherent. A real GetState
+inside a layer event must advertise the in-flight operation as pending. Every
+controlled wait releases its gate on failure as well, retaining an assertion
+instead of relying on a timeout. A finite 20-update reentrant stream additionally
+requires ordinary queued key work to run before the stream ends; unbounded
+coalescing fails that assertion without preventing completion.
+
+These checks use the selected production core, event manager, behavior and
+settings implementations. Test-only save faults, queue gates and notification
+construction are controlled boundaries. They establish neither physical scan/
+transport timing nor atomicity of unrelated core structural edits. No core source
+or dependency pin is changed by these repairs, and no new Custom Settings API is
+required. An explicit reviewed working dependency override may be selected for
+integration testing; record its source identity separately from the fixed pin.
+
+`tests/web/layerAvailability.spec.tsx` covers holes, removed saved choices in both
+tables, an authoritative empty list, successful replacement/clearing, moved global
+default positions and pending-versus-completed display. All legacy absent-range,
+single-layer, error/retry and connection-lifetime cases remain selected.
+
+Apply each fault only to a fresh isolated owner copy:
+
+```sh
+python3 tests/review_negative_control.py ISOLATED_OWNER FAULT
+```
+
+For `default-floor`, `structural-trigger`, `direct-apply`,
+`unbounded-coalescing`, `availability-wire` and `pending-state`, build the same
+`review` native fixture and execute the unchanged assertions three times from
+independent empty initial-flash directories, retaining actual exits, ordered
+output and the checked result. They must reject, respectively, the lower-floor,
+reorder, foreign-thread application, queued-key fairness, authoritative availability
+and in-flight state assertions. Run `web-availability` and `web-pending` through
+`bash tests/run-web.sh`; the new DOM assertions must fail. Source selectors must
+match exactly once. Compilation/setup errors, missing generated types, collection
+failures or timeouts are not accepted as killed controls. The original native
+admission, build-budget and review-dependency controls remain mandatory.

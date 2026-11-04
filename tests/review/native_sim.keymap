@@ -1,0 +1,14 @@
+#include "../application/native_sim.keymap"
+#include <behaviors/default_layer.dtsi>
+#include <dt-bindings/zmk_behavior_default_layer/default_layer.h>
+
+/* Position 0 retains the original native key stream. Position 2 distinguishes
+ * real dispatch through stable IDs; position 3 exercises a temporary layer. */
+/ {
+    keymap {
+        default_layer { bindings = <&kp A &df DF_INC &kp A &mo 5>; };
+        layer_1 { bindings = <&kp A &kp A &kp B &mo 5>; };
+        layer_2 { bindings = <&kp A &kp A &kp C &mo 5>; };
+        layer_3 { bindings = <&kp A &kp A &kp D &mo 5>; };
+    };
+};

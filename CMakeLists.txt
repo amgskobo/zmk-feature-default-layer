@@ -7,7 +7,7 @@ target_sources_ifdef(CONFIG_ZMK_DEFAULT_LAYER app PRIVATE
     src/behaviors/behavior_default_layer.c
 )
 
-if(CONFIG_ZMK_DEFAULT_LAYER_TEST OR CONFIG_ZMK_DEFAULT_LAYER_APPLICATION_TEST)
+if(CONFIG_ZMK_DEFAULT_LAYER_TEST OR CONFIG_ZMK_DEFAULT_LAYER_APPLICATION_TEST OR CONFIG_ZMK_DEFAULT_LAYER_REVIEW_TEST)
     target_sources(app PRIVATE tests/support/settings_save_fault.c)
     zephyr_link_libraries(-Wl,--wrap=settings_save_one)
 endif()

@@ -15,9 +15,14 @@ K_SEM_DEFINE(application_test_done, 0, 1);
 
 static int application_test_write(int32_t value) {
     struct zmk_custom_setting_value setting = ZMK_CUSTOM_SETTING_VALUE_INT32(value);
-    return zmk_custom_setting_write_array_by_key(DEFAULT_LAYER_SUBSYSTEM_ID, "endpoint_layer",
-                                                 application_test_endpoint, &setting,
-                                                 ZMK_CUSTOM_SETTING_WRITE_MODE_MEMORY);
+    int result = zmk_custom_setting_write_array_by_key(DEFAULT_LAYER_SUBSYSTEM_ID, "endpoint_layer",
+                                                       application_test_endpoint, &setting,
+                                                       ZMK_CUSTOM_SETTING_WRITE_MODE_MEMORY);
+    /* Generic settings notifications are nonblocking. The original assertions
+     * concern completed applications, so explicitly wait for that boundary. */
+    if (result == 0)
+        zmk_default_layer_resolve_and_apply("test-sync");
+    return result;
 }
 
 static int application_test_listener(const zmk_event_t *eh) {

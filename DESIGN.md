@@ -12,6 +12,33 @@ environment and physical-device records are retained privately and are not
 part of this publication copy. No commit, publication or device write is
 authorized by this design.
 
+## Current review contracts
+
+The implementation now validates an explicit index against the configured range,
+the current index-to-stable-ID map and the current position of ZMK's stable
+global default. Positions below that default cannot receive ordinary key
+dispatch and are unavailable. Persisted integers remain current indices rather
+than being reinterpreted as stable IDs; invalid entries remain stored and fall
+back to the stable global default's current index. An absent global default
+resolves to `-1`, not to a different layer at zero.
+
+Core Studio unsaved-change notifications trigger reconciliation after structural
+edits. Application runs on the system workqueue used by physical/split key events;
+module-only mutexes do not provide that serialization. Event callbacks only mark
+pending work and submit it. Explicit callers synchronize unless application is
+already in flight, preserving callback handoff without deadlock. At most four
+coalesced passes execute per invocation; remaining work goes to the queue tail.
+
+The additive `StateResponse.available_layers` submessage is present even when no
+index is assignable and lists authoritative live/dispatchable indices. It handles
+holes independently of `layer_count`, which now counts live layers. Its absence
+retains old-client range handling. `application_pending` distinguishes desired
+resolution from an operation still queued/running; older readers ignore the new
+fields. Both mapping arrays retain public reads and secure generic writes, and
+every direct setter RPC still requires unlock. The historical sections below
+describe the original implementation sequence, not the current permissions,
+initialization or concurrency contract.
+
 ## 1. Goals
 
 1. **Per-endpoint default layer** (existing v1 feature, ported): each output

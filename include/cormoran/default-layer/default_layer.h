@@ -9,8 +9,10 @@
 #include <zmk/keymap.h>
 
 /* Stored per-endpoint / per-OS layer values. Non-negative values are a plain
- * keymap layer index; the two sentinels below share the same int32 storage
- * used by custom settings and the Studio RPC proto. */
+ * current keymap layer index, not a stable ID: reordering changes which layer
+ * it names. Missing, out-of-range and below-global-default indices remain
+ * stored but resolve to the current index of the stable global default. The
+ * sentinels share the same int32 storage as custom settings and Studio RPC. */
 #define ZMK_DEFAULT_LAYER_UNSET (-1)
 #define ZMK_DEFAULT_LAYER_OS_DETECTION (-2)
 
@@ -21,17 +23,26 @@
 #define ZMK_DEFAULT_LAYER_OS_COUNT 6
 
 /* Resolve and (re-)apply the default layer for the currently selected
- * endpoint, from thread context. Updates received during an application are
- * coalesced; the active application reconciles the latest mapping before it
- * returns. Re-entrant callers return without waiting for that reconciliation. */
+ * endpoint, on the system workqueue used by ordinary key events. Other thread
+ * callers wait for queued work unless an application is already in flight.
+ * Event listeners only request work and never wait. Updates during application are
+ * coalesced, with at most four reconciliation passes per invocation; remaining
+ * work returns to the queue tail. Reentrant/in-flight callers do not wait.
+ * Check application_pending before treating a desired mapping as applied. */
 void zmk_default_layer_resolve_and_apply(const char *reason);
 
 /* Resolve the currently selected endpoint's configured value (layer index,
  * UNSET, or OS_DETECTION) down to a concrete keymap layer index - the same
  * resolution zmk_default_layer_resolve_and_apply() applies, without
  * re-activating anything. Used as the baseline for the DF_INC behavior and
- * reported to Studio RPC clients. */
+ * reported to Studio RPC clients. Returns UNSET if the stable global default
+ * is missing from the current ordering, rather than aliasing another layer. */
 int32_t zmk_default_layer_resolve_current(void);
+
+/* Whether an explicit index is assignable in the current keymap ordering.
+ * A layer below the stable global default is never visited by key dispatch. */
+bool zmk_default_layer_index_available(int32_t index);
+bool zmk_default_layer_application_pending(void);
 
 /* Get/set the configured value (layer index, UNSET, or OS_DETECTION) for one
  * endpoint, addressed by zmk_endpoint_instance_to_index(). A persistence error

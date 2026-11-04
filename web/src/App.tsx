@@ -87,8 +87,18 @@ function layerValueOptions(
     state.configurableRange?.maxIndex ?? state.layerCount - 1,
     state.layerCount - 1
   );
-  for (let i = min; i <= max; i++) {
-    options.push({ value: i, label: `Layer ${i}` });
+  const available = state.availableLayers
+    ? state.availableLayers.indices
+    : Array.from({ length: Math.max(0, max - min + 1) }, (_, i) => min + i);
+  for (const index of available) {
+    // New firmware supplies authoritative live/dispatchable indices, including
+    // holes and an empty set. Older firmware retains the advertised range.
+    if (
+      index < min ||
+      (state.configurableRange && index > state.configurableRange.maxIndex)
+    )
+      continue;
+    options.push({ value: index, label: `Layer ${index}` });
   }
   if (!options.some((option) => option.value === storedValue)) {
     options.push({
@@ -238,6 +248,11 @@ function DefaultLayerSession() {
               {" · "}
               Resolved layer: <strong>{state.resolvedLayer}</strong>
             </p>
+            {state.applicationPending && (
+              <p role="status">
+                Layer application is pending. Refresh to read its completion.
+              </p>
+            )}
           </div>
 
           <h3>Connections</h3>

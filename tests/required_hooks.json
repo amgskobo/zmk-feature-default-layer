@@ -28,5 +28,18 @@
         ],
         "fixtures": ["application"],
         "hook": "default_layer_concurrency_test"
+    },
+    {
+        "configs": [
+            "CONFIG_ZMK_DEFAULT_LAYER_REVIEW_TEST",
+            "CONFIG_ZMK_DEFAULT_LAYER",
+            "CONFIG_ZMK_CUSTOM_SETTINGS",
+            "CONFIG_ZMK_STUDIO",
+            "CONFIG_ZMK_DEFAULT_LAYER_STUDIO_RPC",
+            "CONFIG_ZMK_KEYMAP_LAYER_REORDERING",
+            "CONFIG_ZMK_STUDIO_LOCKING"
+        ],
+        "fixtures": ["review"],
+        "hook": "default_layer_review_test"
     }
 ]

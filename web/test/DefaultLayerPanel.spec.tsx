@@ -43,6 +43,8 @@ const sampleState: StateResponse = {
   layerCount: 4,
   osDetectionAvailable: true,
   configurableRange: undefined,
+  availableLayers: undefined,
+  applicationPending: false,
 };
 
 describe("DefaultLayerPanel", () => {

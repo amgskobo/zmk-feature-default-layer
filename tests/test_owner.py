@@ -121,6 +121,7 @@ class WestCommandsTests(unittest.TestCase):
         verify_native(test_build_dir, THIS_DIR / "tests")
         self.assertIn("PASS: test", result.stdout, result.stdout + result.stderr)
         self.assertIn("PASS: studio", result.stdout, result.stdout + result.stderr)
+        self.assertIn("PASS: review", result.stdout, result.stdout + result.stderr)
         self.assertNotIn("FAILED: ", result.stdout, result.stdout + result.stderr)
 
     def test_zmk_build(self):

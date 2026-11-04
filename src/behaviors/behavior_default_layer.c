@@ -33,14 +33,20 @@ static int on_keymap_binding_pressed(struct zmk_behavior_binding *binding,
         /* Cycle from the resolved (concrete) current layer, not the raw
          * stored value - which may be UNSET or OS_DETECTION. */
         int32_t current = zmk_default_layer_resolve_current();
-        int32_t next;
-        if (current < CONFIG_ZMK_DEFAULT_LAYER_MIN_INDEX ||
-            current >= CONFIG_ZMK_DEFAULT_LAYER_MAX_INDEX) {
-            next = CONFIG_ZMK_DEFAULT_LAYER_MIN_INDEX;
-        } else {
-            next = current + 1;
+        int32_t next = current;
+        for (int i = CONFIG_ZMK_DEFAULT_LAYER_MIN_INDEX; i <= CONFIG_ZMK_DEFAULT_LAYER_MAX_INDEX;
+             ++i) {
+            if (next < CONFIG_ZMK_DEFAULT_LAYER_MIN_INDEX ||
+                next >= CONFIG_ZMK_DEFAULT_LAYER_MAX_INDEX) {
+                next = CONFIG_ZMK_DEFAULT_LAYER_MIN_INDEX;
+            } else {
+                ++next;
+            }
+            if (zmk_default_layer_index_available(next)) {
+                return zmk_default_layer_set_endpoint(endpoint_index, next, "increment");
+            }
         }
-        return zmk_default_layer_set_endpoint(endpoint_index, next, "increment");
+        return -ENODEV;
     }
     default:
         LOG_ERR("Unknown command for df: %d", binding->param1);

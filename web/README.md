@@ -49,6 +49,17 @@ The protobuf schema is defined in `../proto/cormoran/default-layer/default_layer
 `-1` means unset, and `-2` (endpoint values only) means "resolve via the
 per-OS mapping".
 
+Saved nonnegative values follow the current layer ordering. Firmware with
+`available_layers` supplies the exact indices that exist, lie within its range
+and are at or above the current global default. The submessage is authoritative
+even when empty; removed/unavailable saved numbers remain selected as disabled
+options until a permitted replacement succeeds. Legacy firmware without that
+submessage retains range-based choices. A live count alone cannot describe holes.
+
+`resolved_layer` is the desired mapping. If `application_pending` is true, the
+system-workqueue application has not finished; the panel says so and Refresh
+reads completion. GetState remains a nonblocking read of that public state.
+
 ### 2. Code Generation
 
 TypeScript types are generated using `ts-proto`:
@@ -71,6 +82,10 @@ const response = await service.callRPC(payload);
 ```
 
 ## Testing
+
+From the module root, use `bash tests/run-web.sh` inside the prepared container
+for canonical schema generation and the complete Web selection, including
+`tests/web/`. Run the separate `npm run lint` and `npm run build` checks as well.
 
 ```bash
 # Run all tests

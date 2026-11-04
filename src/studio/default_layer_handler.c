@@ -16,6 +16,8 @@
 
 #include <zephyr/logging/log.h>
 LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_LOG_LEVEL);
+BUILD_ASSERT(ZMK_KEYMAP_LAYERS_LEN <= 32,
+             "default-layer availability uses the core's 32-bit layer bound");
 
 static struct zmk_rpc_custom_subsystem_meta default_layer_meta = {
     ZMK_RPC_CUSTOM_SUBSYSTEM_UI_URLS("https://cormoran.github.io/zmk-feature-default-layer/"),
@@ -83,7 +85,19 @@ static void handle_get_state(cormoran_default_layer_StateResponse *out) {
     out->active_endpoint_index = zmk_endpoint_instance_to_index(endpoint);
     out->current_os = current_os();
     out->resolved_layer = zmk_default_layer_resolve_current();
-    out->layer_count = ZMK_KEYMAP_LAYERS_LEN;
+    out->layer_count = 0;
+    out->has_available_layers = true;
+    out->available_layers.indices_count = 0;
+    for (int index = 0; index < ZMK_KEYMAP_LAYERS_LEN; ++index) {
+        zmk_keymap_layer_id_t id = zmk_keymap_layer_index_to_id(index);
+        if (id != ZMK_KEYMAP_LAYER_ID_INVAL && id < ZMK_KEYMAP_LAYERS_LEN)
+            ++out->layer_count;
+        if (zmk_default_layer_index_available(index) &&
+            out->available_layers.indices_count < ARRAY_SIZE(out->available_layers.indices)) {
+            out->available_layers.indices[out->available_layers.indices_count++] = index;
+        }
+    }
+    out->application_pending = zmk_default_layer_application_pending();
     out->os_detection_available = IS_ENABLED(CONFIG_ZMK_DEFAULT_LAYER_OS_DETECTION);
     out->has_configurable_range = true;
     out->configurable_range.min_index = CONFIG_ZMK_DEFAULT_LAYER_MIN_INDEX;
@@ -186,4 +200,7 @@ static bool default_layer_rpc_handle_request(const zmk_custom_CallRequest *raw_r
 
 #if IS_ENABLED(CONFIG_ZMK_DEFAULT_LAYER_TEST)
 #include "../../tests/support/default_layer_rpc_lock_test.inc"
+#endif
+#if IS_ENABLED(CONFIG_ZMK_DEFAULT_LAYER_REVIEW_TEST)
+#include "../../tests/support/default_layer_review_rpc.inc"
 #endif

@@ -9,10 +9,10 @@ Keep the module's documented imports enabled where required. The original
 upstream installation examples below describe the upstream repository.
 
 The dependency manifests select the available Custom Settings revision
-`b91a8ceb0a57a0cf41b34270752d79463e2848fa` from its reviewed fork;
+`c4071b095c3007d1deb055c609603ca9b5897d14` from its reviewed fork;
 production imports and isolated tests use the same registry implementation.
 OS Detection is pinned to
-`0ef78dd84cf1c3eb7b4a22f66aa4753e0ae7a6bb` from its reviewed fork as well.
+`9c4b0b8df6da589b1ea3b6675a1441b61f9c3e0b` from its reviewed fork as well.
 CI preparation checks both named `codex/*-review` branch tips against these pins
 before fetching dependencies. Update and review a pin explicitly when its
 review branch advances.
@@ -92,15 +92,33 @@ this version adds runtime configuration via a Web UI, using the
    `CONFIG_ZMK_OS_DETECTION_LAYER_*` auto-switch options together with this
    module — both would compete to activate/deactivate layers.
 
-   Only indices in the inclusive `[MIN_INDEX, MAX_INDEX]` range can be assigned.
-   Both bounds must be within the keymap. Direct setters reject values outside
-   this range; older stored or imported values outside it resolve to the keymap
-   default. The Web UI receives these bounds from the firmware. Unset also
-   resolves to the keymap default, which may lie outside the configurable range.
-   The Web UI keeps unavailable stored values visible as disabled options until
-   a permitted replacement is saved successfully.
-   Changes arriving during an application are coalesced and reconciled to the
-   latest endpoint and mapping before the active application returns.
+   Only live indices in the inclusive `[MIN_INDEX, MAX_INDEX]` range at or above
+   the current global default can be assigned. Both bounds must be within the
+   compiled keymap capacity. ZMK does not dispatch keys through layers below
+   its global default. Direct setters reject unavailable indices; older stored
+   or imported values remain visible but resolve to the current index of the
+   stable global default. Unset uses that same fallback, which may be outside
+   the configurable range. The Web UI receives the bounds and an authoritative
+   list of available indices, including holes or an empty list, and keeps an
+   unavailable stored value as a disabled option until replacement succeeds.
+
+   Values are indices in the **current ordering**, not stable layer IDs.
+   Reordering changes which layer a saved number names. Studio move, removal,
+   addition, reset and discard notifications reconcile the active mapping and
+   retire its previously applied ID. An invalid saved number is not silently
+   changed to another number or erased; if its position becomes available again,
+   it follows that position as before. No narrow integer conversion is used to
+   turn an invalid saved value into another layer.
+
+   Runtime application uses the system workqueue used by physical and split key
+   events. Event listeners request work without waiting. Explicit setters
+   synchronize with queued work unless application is already in flight;
+   reentrant/in-flight changes coalesce. Each invocation performs at most four
+   reconciliation passes, then returns remaining work to the queue tail.
+   GetState reads the desired mapping without waiting for that queue.
+   `resolved_layer` is the desired mapping; `application_pending` says that its
+   application is still queued or running. The Web UI shows that condition and
+   Refresh reads completion. A successful write alone is not proof of completion.
 
 3. Optionally add `&df` to your keymap if you want to change the mapping
    from the keyboard itself, in addition to the Web UI:
@@ -141,6 +159,12 @@ error. These values may be unsaved, so check the current state before retrying.
 The explicit **Retry last change** action resends the failed assignment even if
 its runtime value is already selected. Older errors without a state leave the
 displayed mapping unchanged.
+
+Removing ZMK's stable global default leaves the core without its dispatch floor;
+this module cannot repair that core keymap state. Resolution reports `-1` instead
+of selecting an unrelated layer at index zero, retires its managed layer and
+does not activate an invalid ID. Direct users of core structural-edit APIs must
+request reconciliation afterward; Studio supplies the notifications automatically.
 
 ### Web UI
 
