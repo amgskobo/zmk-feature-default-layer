@@ -6,11 +6,11 @@ manifest:
   projects:
     - name: zmk-feature-custom-settings
       url: https://github.com/amgskobo/zmk-feature-custom-settings
-      revision: c4071b095c3007d1deb055c609603ca9b5897d14
+      revision: c38ce14beb07ecebc266c809870a3540942cdb24
       userdata:
         review-branch: codex/custom-settings-review
     - name: zmk-feature-os-detection
       url: https://github.com/amgskobo/zmk-feature-os-detection
-      revision: 9c4b0b8df6da589b1ea3b6675a1441b61f9c3e0b
+      revision: 6def6f3ca29007ac083f90016dcb09683ff4dad7
       userdata:
         review-branch: codex/os-detection-review
