@@ -41,7 +41,7 @@ config ZMK_DEFAULT_LAYER_APPLICATION_TEST
 
 config ZMK_DEFAULT_LAYER_REVIEW_TEST
     bool "Enable default layer ordering, availability and key-queue regressions"
-    depends on ZMK_CUSTOM_SETTINGS && ZMK_KEYMAP_LAYER_REORDERING && ZMK_DEFAULT_LAYER_STUDIO_RPC
+    depends on ZMK_CUSTOM_SETTINGS && ZMK_KEYMAP_LAYER_REORDERING && ZMK_DEFAULT_LAYER_STUDIO_RPC && ZMK_DEFAULT_LAYER_OS_DETECTION
     help
       Owner native fixture only. Reorders/removes layers and controls actual
       system-workqueue key execution; never enable in a keyboard build.

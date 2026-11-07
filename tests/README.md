@@ -4,7 +4,7 @@ Run the complete native/board matrix inside a prepared Linux container and the
 explicitly resolved west workspace:
 
 ```sh
-python3 test.py
+python3 test.py -v
 ```
 
 The root entry dispatches assertions owned by `tests/test_owner.py`, output
@@ -21,14 +21,45 @@ Resolve all transitive dependencies and record selected local module overrides
 before execution. Ordinary runs must not fetch dependencies or update caches.
 This custom Studio RPC module supports DYA; stock ZMK is NOT APPLICABLE.
 
+The selected DYA core's `app/module/drivers/kscan/kscan_mock.c` uses a signed
+`1 << 31` in mock initialization. A native run with undefined-behavior
+sanitization can stop at that dependency defect. Retain the raw output and
+report blocked fixture completions separately from any owner hooks that ran
+before it, unsanitized runs and address-sanitizer-only runs. Do not patch the
+core, suppress that check or disable required features to report a combined
+sanitizer pass.
+
 `tests/native_verifier.py` runs each produced native binary three times in
 independent empty initial-flash directories. It records the binary and fixture
 hashes, raw output and actual process exit before comparing unchanged ordered
 snapshots. `required_hooks.json` maps enabled test configurations to checked
 initialization hooks. Missing requested configuration, missing hooks, missing or
-nonzero completion, logged assertion failures and fatal output all fail. The
-eleven verifier controls compile real synthetic ELF programs; these controls
+nonzero completion, logged assertion failures, sanitizer diagnostics and fatal
+output all fail. A recovering diagnostic still fails when the process exits zero
+and its hooks and snapshots match. Diagnostic syntax is checked rather than bare
+sanitizer names or configuration text. The fourteen verifier controls compile real
+synthetic ELF programs; these controls
 verify result admission and do not execute ZMK firmware.
+
+The recovering ASan control emits a real heap overflow on stdout; the UBSan
+control emits a real signed-shift diagnostic on stderr. Both must first establish
+process exit zero, checked initialization and the expected event, then require
+admission to reject the diagnostic. The unmodified verifier must fail exactly
+those rejection assertions. Preserve the original ELFs and replay them through
+the fixed verifier without recompilation. `NATIVE_VERIFIER_CONTROL_OUTPUT` can
+retain every control's source, compiler command, direct streams and verifier
+runs below a fresh absolute results directory.
+
+For combined sanitizer comparisons, inspect the actual last compiler flags.
+`CONFIG_ASAN_RECOVER=n` alone is not proof that every enabled sanitizer is
+compiler-strict; the strict Zephyr/owner profile also supplies
+`-DEXTRA_CFLAGS=-fno-sanitize-recover=all`. A deliberately recovering profile uses
+`-DEXTRA_CFLAGS=-fsanitize-recover=all` and runtime `halt_on_error=0`. Retain the
+native simulator runner's separate Makefile, `nsi_config`, dependency files and
+object/source identities as well as `compile_commands.json`. Its flags and
+optimization can differ from the Zephyr/owner objects. A runner controlled by
+`UBSAN_OPTIONS=halt_on_error=1` has a runtime-strict policy; do not call its
+compiler strict without the corresponding compiler flag.
 
 Test scenarios and private static-handler fixtures live under `tests/support/`.
 Guarded production includes expose those scenarios only in test builds; public
@@ -79,8 +110,9 @@ reject missing configuration when both the request and build omit it; excluded
 roles cannot replace the requested role. The verifier retains all three raw
 runs before comparing unchanged ordered snapshots and rejects logged failures,
 fatal output and missing/nonzero completions. `tests/test_native_verifier.py`
-owns eleven real-ELF admission controls, including a deliberately missing
-native scenario, wrong-role and unrelated-fixture controls.
+owns fourteen real-ELF admission controls, including a deliberately missing
+native scenario, wrong-role, unrelated-fixture, two recovering sanitizer and
+benign sanitizer-text controls.
 
 `bash tests/run-web.sh` is the canonical schema-generation/Web test entry.
 It runs all configured Jest scenarios in one worker process. The pre-commit
@@ -89,7 +121,7 @@ the global container budget. Build and lint retain their separate package entrie
 
 ## Web connection ownership
 
-`tests/web/lifecycle.spec.tsx` retains six provider/deferred-response cases for
+`tests/web/lifecycle.spec.tsx` retains eight provider/deferred-response cases for
 connection and subsystem-index replacement, immediate mapping retirement, late
 success/error and independent loading completion. The original Web scenarios
 remain selected. Retired requests cannot replace the current state. These are
@@ -97,11 +129,12 @@ controlled SDK/DOM observations; physical transport remains NOT RUN.
 
 ## Ordering, dispatch and application queue regressions
 
-The additional `review` native fixture is selected by the same canonical
-`python3 test.py` entry. All original native scenarios, six application markers,
-four board configurations and ordered snapshots remain unchanged. The review
-fixture has its own checked completion and four independently expected markers;
-the exact native binary runs three times with independent initial state.
+The `review` native fixture is selected by the same canonical
+`python3 test.py -v` entry. All original native scenarios, six application markers
+and four board configurations remain selected. The four original review markers
+retain their order; two further contract cases add manually specified markers.
+Its checked completion and all six markers are required; the exact native binary
+runs three times with independent initial state.
 
 The fixture edits the actual core ordering and emits the same unsaved-change
 notification as core Studio. A moved global default rejects lower indices at
@@ -115,6 +148,21 @@ preserves an invalid stored number, reports the live count and handles an
 interior invalid slot separately from live later indices. Restoration reconciles
 that same saved index. Raw nanopb request/response round trips check optional
 presence and exact availability lists while Studio remains locked for GetState.
+
+An additional case removes stable global ID0 through the core's public API.
+The live layer now at index zero must not become a fallback: resolution is -1,
+availability is empty, explicit setters refuse the other indices, the old managed
+layer retires and an unrelated temporary layer survives. Restoring ID0 at index
+zero reapplies the unchanged saved position and restores its real key dispatch.
+
+The same fixture enables OS resolution and wraps only the public
+`zmk_os_detection_current()` query with a test-owned value. Actual
+`zmk_os_changed` events exercise Default Layer's listener and system queue:
+Windows/macOS/Unknown changes, a stale event payload, independent fixed endpoint
+and OS entries, and an invalid saved OS index must dispatch the specified
+B/C/D/A keycodes or fall back without changing the stored selector. The original
+four cases remain in this fixture. This controlled dependency boundary does not
+test OS fingerprint inference or physical USB/BLE delivery.
 
 The kernel boundary parks actual key work on the system queue. A distinct thread
 performs a generic memory write or a direct setter with an injected save error.
@@ -146,11 +194,12 @@ Apply each fault only to a fresh isolated owner copy:
 python3 tests/review_negative_control.py ISOLATED_OWNER FAULT
 ```
 
-For `default-floor`, `structural-trigger`, `direct-apply`,
+For `default-floor`, `missing-global`, `os-change`, `structural-trigger`, `direct-apply`,
 `unbounded-coalescing`, `availability-wire` and `pending-state`, build the same
 `review` native fixture and execute the unchanged assertions three times from
 independent empty initial-flash directories, retaining actual exits, ordered
 output and the checked result. They must reject, respectively, the lower-floor,
+unresolved missing-global fallback, applied Windows mapping after an OS event,
 reorder, foreign-thread application, queued-key fairness, authoritative availability
 and in-flight state assertions. Run `web-availability` and `web-pending` through
 `bash tests/run-web.sh`; the new DOM assertions must fail. Source selectors must

@@ -12,6 +12,10 @@ if(CONFIG_ZMK_DEFAULT_LAYER_TEST OR CONFIG_ZMK_DEFAULT_LAYER_APPLICATION_TEST OR
     zephyr_link_libraries(-Wl,--wrap=settings_save_one)
 endif()
 
+if(CONFIG_ZMK_DEFAULT_LAYER_REVIEW_TEST)
+    zephyr_link_libraries(-Wl,--wrap=zmk_os_detection_current)
+endif()
+
 if(CONFIG_ZMK_DEFAULT_LAYER_STUDIO_RPC)
     target_sources(app PRIVATE src/studio/default_layer_handler.c)
 

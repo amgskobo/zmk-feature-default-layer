@@ -9,6 +9,10 @@ int default_layer_review_rpc_state(const uint32_t *expected, size_t count, uint3
                                    bool pending);
 
 static uint8_t review_endpoint;
+/* Control only the public OS query consumed by this owner. The real OS event
+ * implementation and Default Layer listener remain linked and exercised. */
+static atomic_t review_os;
+enum zmk_os __wrap_zmk_os_detection_current(void) { return (enum zmk_os)atomic_get(&review_os); }
 static atomic_t review_context_bad, review_key_bad;
 static bool review_monitor, review_capture_key, review_pending_capture;
 static unsigned review_pressed, review_released;
@@ -252,6 +256,90 @@ static int review_order_and_removal(void) {
     return 0;
 }
 
+static int review_missing_global(void) {
+    REVIEW_CHECK(review_set(3) == 0);
+    REVIEW_CHECK(zmk_keymap_layer_activate(5, false) == 0);
+    REVIEW_CHECK(zmk_keymap_remove_layer(0) == 0);
+    REVIEW_CHECK(review_structural_change() == 0);
+    /* No live layer is a dispatch floor now. In particular, live index zero
+     * names stable ID1, so substituting zero would select an unrelated layer. */
+    REVIEW_CHECK(zmk_keymap_layer_index_to_id(0) == 1);
+    REVIEW_CHECK(zmk_default_layer_resolve_current() == ZMK_DEFAULT_LAYER_UNSET);
+    REVIEW_CHECK(zmk_default_layer_get_endpoint(review_endpoint) == 3);
+    REVIEW_CHECK(!zmk_keymap_layer_active(3));
+    REVIEW_CHECK(zmk_keymap_layer_active(5));
+    for (int32_t index = 0; index < ZMK_KEYMAP_LAYERS_LEN; ++index)
+        REVIEW_CHECK(!zmk_default_layer_index_available(index));
+    REVIEW_CHECK(zmk_default_layer_set_endpoint(review_endpoint, 1, "review") == -EINVAL);
+    REVIEW_CHECK(zmk_default_layer_set_os(0, 1, "review") == -EINVAL);
+    REVIEW_CHECK(default_layer_review_rpc_state(NULL, 0, 5, false) == 0);
+    REVIEW_CHECK(zmk_keymap_restore_layer(0, 0) == 0);
+    REVIEW_CHECK(review_structural_change() == 0);
+    REVIEW_CHECK(zmk_default_layer_get_endpoint(review_endpoint) == 3);
+    REVIEW_CHECK(zmk_default_layer_resolve_current() == 3 && zmk_keymap_layer_active(3));
+    REVIEW_CHECK(zmk_keymap_layer_deactivate(5, false) == 0);
+    REVIEW_CHECK(review_dispatch(0x07) == 0); /* Restored index3 is stable ID3: D. */
+    REVIEW_CHECK(review_set(ZMK_DEFAULT_LAYER_UNSET) == 0);
+    LOG_INF("PASS: reviewed_default_layer_missing_global");
+    return 0;
+}
+
+static int review_os_event(enum zmk_os current, enum zmk_os announced) {
+    atomic_set(&review_os, current);
+    REVIEW_CHECK(raise_zmk_os_changed((struct zmk_os_changed){.os = announced}) == 0);
+    struct k_work_sync sync;
+    k_work_flush(&default_layer_apply_work, &sync);
+    REVIEW_CHECK(!zmk_default_layer_application_pending());
+    return 0;
+}
+
+static int review_os_changes(void) {
+    const int32_t unknown_before = zmk_default_layer_get_os(ZMK_OS_UNKNOWN);
+    const int32_t windows_before = zmk_default_layer_get_os(ZMK_OS_WINDOWS);
+    const int32_t macos_before = zmk_default_layer_get_os(ZMK_OS_MACOS);
+    REVIEW_CHECK(review_write("os_layer", ZMK_OS_UNKNOWN, ZMK_DEFAULT_LAYER_UNSET) == 0);
+    REVIEW_CHECK(review_write("os_layer", ZMK_OS_WINDOWS, 1) == 0);
+    REVIEW_CHECK(review_write("os_layer", ZMK_OS_MACOS, 3) == 0);
+    REVIEW_CHECK(review_set(ZMK_DEFAULT_LAYER_OS_DETECTION) == 0);
+    REVIEW_CHECK(zmk_default_layer_resolve_current() == 0);
+    review_monitor = true;
+    /* A queued OS announcement may be stale. Resolve the current query,
+     * without trusting the event payload as the selected endpoint's OS. */
+    REVIEW_CHECK(review_os_event(ZMK_OS_WINDOWS, ZMK_OS_MACOS) == 0);
+    REVIEW_CHECK(zmk_default_layer_resolve_current() == 1 && zmk_keymap_layer_active(1));
+    REVIEW_CHECK(review_dispatch(0x05) == 0); /* Windows mapping: B. */
+    REVIEW_CHECK(review_set(2) == 0);
+    REVIEW_CHECK(review_os_event(ZMK_OS_MACOS, ZMK_OS_MACOS) == 0);
+    REVIEW_CHECK(zmk_default_layer_get_endpoint(review_endpoint) == 2);
+    REVIEW_CHECK(zmk_default_layer_resolve_current() == 2 && zmk_keymap_layer_active(2));
+    REVIEW_CHECK(review_dispatch(0x06) == 0); /* A fixed endpoint stays C. */
+    REVIEW_CHECK(review_set(ZMK_DEFAULT_LAYER_OS_DETECTION) == 0);
+    REVIEW_CHECK(zmk_default_layer_resolve_current() == 3 && zmk_keymap_layer_active(3));
+    REVIEW_CHECK(review_write("os_layer", ZMK_OS_WINDOWS, 2) == 0);
+    zmk_default_layer_resolve_and_apply("review-os-sync");
+    REVIEW_CHECK(zmk_default_layer_get_os(ZMK_OS_MACOS) == 3);
+    REVIEW_CHECK(zmk_default_layer_resolve_current() == 3);
+    REVIEW_CHECK(review_dispatch(0x07) == 0); /* macOS mapping stays D. */
+    REVIEW_CHECK(review_os_event(ZMK_OS_UNKNOWN, ZMK_OS_UNKNOWN) == 0);
+    REVIEW_CHECK(zmk_default_layer_resolve_current() == 0 && !zmk_keymap_layer_active(3));
+    REVIEW_CHECK(review_dispatch(0x04) == 0);
+    REVIEW_CHECK(review_write("os_layer", ZMK_OS_WINDOWS, 256) == 0);
+    REVIEW_CHECK(review_os_event(ZMK_OS_WINDOWS, ZMK_OS_WINDOWS) == 0);
+    REVIEW_CHECK(zmk_default_layer_get_os(ZMK_OS_WINDOWS) == 256);
+    REVIEW_CHECK(zmk_default_layer_resolve_current() == 0);
+    REVIEW_CHECK(review_dispatch(0x04) == 0); /* Invalid stored OS index falls back. */
+    REVIEW_CHECK(zmk_default_layer_get_endpoint(review_endpoint) == ZMK_DEFAULT_LAYER_OS_DETECTION);
+    REVIEW_CHECK(atomic_get(&review_context_bad) == 0 && atomic_get(&review_key_bad) == 0);
+    review_monitor = false;
+    REVIEW_CHECK(review_write("os_layer", ZMK_OS_WINDOWS, windows_before) == 0);
+    REVIEW_CHECK(review_write("os_layer", ZMK_OS_MACOS, macos_before) == 0);
+    REVIEW_CHECK(review_write("os_layer", ZMK_OS_UNKNOWN, unknown_before) == 0);
+    REVIEW_CHECK(review_os_event(ZMK_OS_UNKNOWN, ZMK_OS_UNKNOWN) == 0);
+    REVIEW_CHECK(review_set(ZMK_DEFAULT_LAYER_UNSET) == 0);
+    LOG_INF("PASS: reviewed_default_layer_os_changes");
+    return 0;
+}
+
 static void review_writer(void *a, void *b, void *c) {
     ARG_UNUSED(a);
     ARG_UNUSED(b);
@@ -342,6 +430,10 @@ static void owner_checked_default_layer_review_test(void *a, void *b, void *c) {
     int result = review_global_floor();
     if (result == 0)
         result = review_order_and_removal();
+    if (result == 0)
+        result = review_missing_global();
+    if (result == 0)
+        result = review_os_changes();
     if (result == 0)
         result = review_key_queue();
     if (result == 0)

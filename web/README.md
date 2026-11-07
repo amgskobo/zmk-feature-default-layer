@@ -8,8 +8,8 @@ resolved by [zmk-feature-os-detection](https://github.com/cormoran/zmk-feature-o
 ## Quick Start
 
 ```bash
-# Install dependencies
-npm install
+# Prepare the locked dependencies (networked preparation)
+npm ci
 
 # Generate TypeScript types from proto
 npm run generate
@@ -102,5 +102,23 @@ npm run test:coverage
 
 `package.json` overrides the Studio client's transitive `protobufjs` dependency
 to `7.6.5`, including the patched UTF-8 helper. Use `npm ci` with this lockfile.
-After changing dependencies, run `npm audit --omit=dev`, the Web tests and the
-production build.
+After changing dependencies, retain both `npm audit --json` and
+`npm audit --omit=dev --json`, their actual exits and advisory counts. The full
+audit still fails if development dependencies have findings; an empty
+production-only audit does not establish whole-product security.
+
+The 2026-11-07 compatible development-transitive lock update preserves the root
+declarations, every direct locked dependency, Git SDK/hook revisions, protobuf
+override and production dependency records. Every changed incoming dependency
+range must accept the selected version. Full audit findings decreased from 29
+(one critical, eight high, fifteen moderate, five low) to eighteen (fourteen
+moderate, four low); production-only audits reported zero in both states.
+Remaining findings require separate dependency-boundary review, not a forced
+update of the declared tools.
+
+Use a fresh cache for scripts-enabled `npm ci` and record the actual Linux
+lifecycle packages. The fork-review workflow selects Node 22.23.4; the general
+Web workflow selects Node 24. Verify generation, all Web tests, lint and build
+with each selected runtime. Use the installed SDK's runtime and declarations for
+these checks; a source-rich reference checkout is a separate input. These local
+checks do not establish hosted CI, browser transport or physical acceptance.

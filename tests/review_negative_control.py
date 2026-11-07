@@ -17,6 +17,8 @@ def main() -> None:
         "fault",
         choices=(
             "default-floor",
+            "missing-global",
+            "os-change",
             "structural-trigger",
             "direct-apply",
             "unbounded-coalescing",
@@ -40,6 +42,18 @@ def main() -> None:
     source = target.read_text()
     if args.fault == "default-floor":
         source = replace_once(source, "index >= floor", "true")
+    elif args.fault == "missing-global":
+        source = replace_once(
+            source,
+            "/* Never turn a missing stable default into an unrelated layer at zero. */\n"
+            "    return ZMK_DEFAULT_LAYER_UNSET;",
+            "/* Fault: substitute the unrelated live layer at index zero. */\n"
+            "    return 0;",
+        )
+    elif args.fault == "os-change":
+        source = replace_once(
+            source, "if (as_zmk_os_changed(eh))", "if (false && as_zmk_os_changed(eh))"
+        )
     elif args.fault == "structural-trigger":
         source = replace_once(
             source, "if (notification &&", "if (false && notification &&"

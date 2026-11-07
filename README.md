@@ -9,10 +9,10 @@ Keep the module's documented imports enabled where required. The original
 upstream installation examples below describe the upstream repository.
 
 The dependency manifests select the available Custom Settings revision
-`c4071b095c3007d1deb055c609603ca9b5897d14` from its reviewed fork;
+`c38ce14beb07ecebc266c809870a3540942cdb24` from its reviewed fork;
 production imports and isolated tests use the same registry implementation.
 OS Detection is pinned to
-`9c4b0b8df6da589b1ea3b6675a1441b61f9c3e0b` from its reviewed fork as well.
+`6def6f3ca29007ac083f90016dcb09683ff4dad7` from its reviewed fork as well.
 CI preparation checks both named `codex/*-review` branch tips against these pins
 before fetching dependencies. Update and review a pin explicitly when its
 review branch advances.
@@ -166,6 +166,13 @@ of selecting an unrelated layer at index zero, retires its managed layer and
 does not activate an invalid ID. Direct users of core structural-edit APIs must
 request reconciliation afterward; Studio supplies the notifications automatically.
 
+The reconciliation on a failed save above belongs to this module's endpoint and
+OS setters. A failed `PERSIST` write through generic Custom Settings RPC may also
+retain a new RAM value, but the registry emits no change event for failed writes.
+Retry the write or save successfully to trigger application, or use this module's
+setter. `GetState` reads the desired mapping and does not request application;
+`application_pending=false` only says no application is queued or running.
+
 ### Web UI
 
 See [web/README.md](./web/README.md) for web UI development instructions.
@@ -232,14 +239,14 @@ pre-commit run
 ### Running Test
 
 ```bash
-# Run unit test + build test and verify the results
-python3 -m unittest
-# Run build test directly
+# Run the complete owner checks, native fixtures and board builds
+python3 test.py -v
+# Run build test directly (diagnostic subset)
 west zmk-build tests/zmk-config
-# Run unit test directly
+# Run native snapshots directly (diagnostic subset)
 west zmk-test tests -m .
-# Run web tests
-cd web && npm test
+# Generate schema types and run every Web test
+bash tests/run-web.sh
 ```
 
 ### Sync changes from template

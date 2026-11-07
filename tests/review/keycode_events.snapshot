@@ -1,4 +1,6 @@
 PASS: reviewed_default_layer_global_floor
 PASS: reviewed_default_layer_order_and_removal
+PASS: reviewed_default_layer_missing_global
+PASS: reviewed_default_layer_os_changes
 PASS: reviewed_default_layer_key_queue
 PASS: reviewed_default_layer_bounded_updates

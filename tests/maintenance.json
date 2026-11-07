@@ -5,22 +5,26 @@
                             "dya"
                         ],
     "gaps":  [
+                 "Selected DYA e5c9b6915b56801193e359dd9bad4a167ce0d1b8 kscan_mock.c signed 1 << 31 can block native undefined-behavior-sanitized completion. Retain actual hook order and distinguish blocked completions from unsanitized or address-sanitizer-only results; no dependency patch or sanitizer suppression qualifies as a combined pass.",
                  "Physical USB/BLE/split/timing/power/reset and real browser transport require matching acceptance evidence."
              ],
     "execution":  {
                       "repeats":  "Each exact native binary runs three times from independent empty initial state.",
-                      "outputs":  "Fresh directories; combined ordered logs, actual exits and raw times."
+                      "outputs":  "Fresh directories; combined ordered logs, actual exits and raw times.",
+                      "sanitizer_admission": "Recovering sanitizer diagnostic syntax rejects admission even with process0/init0/matching snapshots; fourteen real-ELF controls retain all eleven original controls, real ASan stdout and UBSan stderr faults, and benign sanitizer names/configuration. Original must fail only the two missing rejection assertions; replay the exact original ELF bytes against the fixed verifier.",
+                      "sanitizer_profiles": "Inspect last effective Zephyr/owner recovery flags and separately retain native simulator Make/nsi_config/.d/object identities. CONFIG_ASAN_RECOVER=n alone is insufficient for compiler-strict UBSan; runtime halt_on_error=1 is a separate policy. Optimized Zephyr/owner objects do not establish an optimized NSI runner."
                   },
     "commands":  [
-                     "python3 test.py",
+                     "python3 test.py -v",
                      "python3 tests/test_runner_contract.py",
                      "python3 tests/test_native_verifier.py"
                  ],
     "owner":  "zmk-feature-default-layer",
     "schema":  1,
     "coverage_map":  "tests/README.md",
-    "ordering_review": "Canonical review native fixture: moved global floor, stable-ID dispatch A/B/C/D, numeric reorder semantics, repeated removal/invalid stored value, holes/live count/restoration, OS fallback and DF_INC; real nanopb availability/empty presence and in-flight GetState; separate checked hook and four markers, same binary3times.",
+    "ordering_review": "Canonical review native fixture: moved global floor, stable-ID dispatch A/B/C/D, numeric reorder semantics, repeated removal/invalid stored value, holes/live count/restoration, missing global ID0 and public-API restoration, OS fallback and DF_INC; real nanopb availability/empty presence and in-flight GetState; separate checked hook and six manual expected markers, same binary3times.",
+    "os_boundary_review": "The review fixture enables OS resolution, wraps only the public current-OS query and raises real OS events. Windows/macOS/Unknown, stale event payload, fixed endpoint independence, separate OS entries and invalid saved OS fallback use real system-queue layer application and independent A/B/C/D dispatch expectations. OS inference and physical USB/BLE delivery remain outside this controlled boundary.",
     "key_queue_review": "Actual system-workqueue position events and mo press/release versus foreign generic/direct setters; injected save error retained; nonblocking notification requests; at most4 coalesced passes then resubmit, finite20-update queued-key fairness control.",
     "web_availability": "tests/web/layerAvailability.spec.tsx: authoritative holes/empty list, removed stored choices in both tables, permitted replacement/clearing, moved global floor and pending/completed state; original legacy range/lifecycle cases preserved.",
-    "review_negative_controls": "tests/review_negative_control.py ISOLATED_OWNER FAULT; default-floor/structural-trigger/direct-apply/unbounded-coalescing/availability-wire/pending-state => unchanged review native assertions3times; web-availability/web-pending => complete owner Web entry. Compile/setup/collection/timeout failures do not qualify."
+    "review_negative_controls": "tests/review_negative_control.py ISOLATED_OWNER FAULT; default-floor/missing-global/os-change/structural-trigger/direct-apply/unbounded-coalescing/availability-wire/pending-state => specified review native assertions3times; web-availability/web-pending => complete owner Web entry. Compile/setup/collection/timeout failures do not qualify."
 }
