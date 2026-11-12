@@ -1,0 +1,5 @@
+# Original full-width response representation, used only as a wire control.
+cormoran.default_layer.ErrorResponse.message      max_size:64
+cormoran.default_layer.StateResponse.endpoints    max_count:10
+cormoran.default_layer.StateResponse.os_layers    max_count:6
+cormoran.default_layer.AvailableLayers.indices    max_count:32

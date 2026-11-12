@@ -4,4 +4,7 @@
 cormoran.default_layer.ErrorResponse.message      max_size:64
 cormoran.default_layer.StateResponse.endpoints    max_count:10
 cormoran.default_layer.StateResponse.os_layers    max_count:6
-cormoran.default_layer.AvailableLayers.indices    max_count:32
+# Outgoing indices are bounded by the core's 32-layer capacity. Keep all 32
+# entries and the uint32 wire type, with byte-sized generated C storage only.
+# Request indices and persisted mapping values deliberately remain full-width.
+cormoran.default_layer.AvailableLayers.indices    max_count:32 int_size:IS_8

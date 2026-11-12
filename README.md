@@ -120,6 +120,16 @@ this version adds runtime configuration via a Web UI, using the
    application is still queued or running. The Web UI shows that condition and
    Refresh reads completion. A successful write alone is not proof of completion.
 
+   The availability response keeps the core's complete 32-index capacity.
+   Nanopb stores those outgoing indices as bytes because the core bounds them
+   to 0..31; their protobuf wire type stays `uint32`. This saves 96 bytes in the
+   index array and 100 bytes in the deferred static RPC response on the checked
+   ARM ABI, including padding, without adding scratch RAM or changing
+   request decoding, saved `int32` values, range bounds or layer identities.
+   The response remains static for the selected DYA API's deferred encoding.
+   Error replies reuse that allocator's complete reset rather than clearing
+   their state a second time.
+
 3. Optionally add `&df` to your keymap if you want to change the mapping
    from the keyboard itself, in addition to the Web UI:
 

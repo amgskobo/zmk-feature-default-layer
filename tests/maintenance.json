@@ -17,7 +17,9 @@
     "commands":  [
                      "python3 test.py -v",
                      "python3 tests/test_runner_contract.py",
-                     "python3 tests/test_native_verifier.py"
+                     "python3 tests/test_native_verifier.py",
+                     "python3 tests/test_proto_wire.py",
+                     "python3 tests/test_entry_selection.py"
                  ],
     "owner":  "zmk-feature-default-layer",
     "schema":  1,
@@ -26,5 +28,7 @@
     "os_boundary_review": "The review fixture enables OS resolution, wraps only the public current-OS query and raises real OS events. Windows/macOS/Unknown, stale event payload, fixed endpoint independence, separate OS entries and invalid saved OS fallback use real system-queue layer application and independent A/B/C/D dispatch expectations. OS inference and physical USB/BLE delivery remain outside this controlled boundary.",
     "key_queue_review": "Actual system-workqueue position events and mo press/release versus foreign generic/direct setters; injected save error retained; nonblocking notification requests; at most4 coalesced passes then resubmit, finite20-update queued-key fairness control.",
     "web_availability": "tests/web/layerAvailability.spec.tsx: authoritative holes/empty list, removed stored choices in both tables, permitted replacement/clearing, moved global floor and pending/completed state; original legacy range/lifecycle cases preserved.",
-    "review_negative_controls": "tests/review_negative_control.py ISOLATED_OWNER FAULT; default-floor/missing-global/os-change/structural-trigger/direct-apply/unbounded-coalescing/availability-wire/pending-state => specified review native assertions3times; web-availability/web-pending => complete owner Web entry. Compile/setup/collection/timeout failures do not qualify."
+    "review_negative_controls": "tests/review_negative_control.py ISOLATED_OWNER FAULT; default-floor/missing-global/os-change/structural-trigger/direct-apply/unbounded-coalescing/availability-wire/pending-state => specified review native assertions3times; web-availability/web-pending => complete owner Web entry. Compile/setup/collection/timeout failures do not qualify.",
+    "canonical_selection": "Root and Web entries reject focused selectors; root requires nonempty collection and all selected case completions without skips. Configured firmware hook dispatches python3 test.py -v and includes proto options. test_entry_selection.py owns selector/empty/missing/skipped controls.",
+    "availability_storage": "Outgoing-only AvailableLayers.indices retains uint32 wire type and max_count32 with nanopb IS_8 C storage, backed by the core's existing32-layer bound. Static deferred response lifetime preserved; no request/persistence narrowing or scratch allocation. test_proto_wire.py builds product and original full-width options with real selected nanopb, strict ASan+UBSan and PB_WITHOUT_64BIT; fixed ordered0..31 vector, full10 endpoint/6 OS/32 availability cross-codec responses3times, sentinels/wide saved values/presence/pending, request257/UINT32_MAX/INT32_MIN/INT32_MAX and outgoing256 rejection. Original compiles and fails only named byte-storage assertion exit2; other original codec checks pass. Index payload saves96 bytes; product static response saves100 bytes including checkedARM padding (456to356). Actual whole-keyboard linked totals and hardware stack high-water are separate."
 }

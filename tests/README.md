@@ -16,6 +16,14 @@ contents; the default is a fresh retained directory outside dependencies.
 Commands retain combined ordered output, actual exits, UTC times and elapsed
 nanoseconds under `commands/`.
 
+The complete root entry accepts only verbosity/help flags, rejects focused
+selectors before running a runtime, and requires a nonempty collection with
+every selected case completed and no required skip. The configured firmware
+pre-commit hook dispatches this same entry, including protocol options changes.
+`bash tests/run-web.sh` similarly accepts no selectors. Direct unittest/Jest
+commands remain diagnostic subsets. `tests/test_entry_selection.py` owns the
+selector, empty-collection and missing/skipped-completion controls.
+
 The test graph pins DYA ZMK, Zephyr and the west command extension explicitly.
 Resolve all transitive dependencies and record selected local module overrides
 before execution. Ordinary runs must not fetch dependencies or update caches.
@@ -182,6 +190,40 @@ transport timing nor atomicity of unrelated core structural edits. No core sourc
 or dependency pin is changed by these repairs, and no new Custom Settings API is
 required. An explicit reviewed working dependency override may be selected for
 integration testing; record its source identity separately from the fixed pin.
+
+## Availability storage and wire compatibility
+
+`tests/test_proto_wire.py` is part of the complete root entry. It generates and
+compiles the selected nanopb schema twice: once with the product options and
+once with the original full-width options retained in
+`tests/support/default_layer_full_width.options`. Both codecs use the actual
+selected nanopb implementation with strict AddressSanitizer and UBSan flags,
+and `PB_WITHOUT_64BIT`. A manually specified packed vector requires all 32
+ordered indices 0..31. Full-capacity responses retain ten endpoint slots, six
+OS slots, negative selectors, an invalid wide stored value, range/availability
+presence and pending state. Each exact producer's bytes are consumed by both
+exact binaries three times; both responses must be byte-identical.
+
+The product stores each outgoing availability index in one byte, saving 96
+bytes in the index array and 100 bytes including padding in the static deferred
+response on the checked ARM ABI (456 to 356 bytes). Its 32-entry
+capacity and `uint32` protobuf wire field are unchanged. The original storage
+control must compile and fail only the named byte-storage assertion with exit2;
+it is an expected rejection, separate from product results. The other original
+producer/consumer checks must pass. A specified outgoing index256 must be
+rejected by the byte decoder, never truncated. This output message is not an
+incoming request. Both generated request variants must still retain index257,
+`UINT32_MAX`, `INT32_MIN` and `INT32_MAX` as full-width values before the
+firmware's existing validation. No request or persistence field is narrowed.
+The handler retains the core allocator's full response reset and omits a second
+error-only clear. The existing failed-save RPC fixture still checks a nested
+error state followed by a locked refusal with no stale state.
+
+Set `PROTO_WIRE_CONTROL_OUTPUT` to a fresh absolute retained path to keep all
+generator/compiler commands, generated sources, both exact instrumented ELFs,
+hashes, fixed/cross-codec bytes and ordered outputs. The default creates a fresh
+retained directory outside the checkout. Codec/native checks do not establish
+browser/device acceptance or hardware stack high-water.
 
 `tests/web/layerAvailability.spec.tsx` covers holes, removed saved choices in both
 tables, an authoritative empty list, successful replacement/clearing, moved global

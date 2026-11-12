@@ -1,6 +1,6 @@
 #include <pb_decode.h>
 #include <pb_encode.h>
-#include <string.h>
+#include <stdio.h>
 #include <zephyr/sys/util.h>
 #include <zmk/studio/core.h>
 #include <zmk/studio/custom.h>
@@ -110,7 +110,8 @@ static void handle_error(cormoran_default_layer_Response *resp, const char *mess
                          bool include_state) {
     resp->which_response_type = cormoran_default_layer_Response_error_tag;
     cormoran_default_layer_ErrorResponse *err = &resp->response_type.error;
-    memset(err, 0, sizeof(*err));
+    /* The selected core's response-buffer allocator already clears the full
+     * response before any request branch. No error path follows a state fill. */
     snprintf(err->message, sizeof(err->message), "%s", message);
     if (include_state) {
         err->has_state = true;
